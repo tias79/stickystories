@@ -1,0 +1,363 @@
+html {
+  box-sizing: border-box;
+  font-size: 1.2vw;
+  font-family: sans-serif;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: black;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+#backlog {
+  width: calc(32vw + 17px);
+  height: 100%;
+  padding: 1vw;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+#backlog .userstory {
+  margin-bottom: 1vw;
+}
+.bar {
+  width: 2vw;
+  height: 100%;
+  writing-mode: tb-rl;
+  display: block;
+  background: black;
+  color: white;
+  padding-top: 1vw;
+  cursor: pointer;
+  z-index: 0;
+}
+.bar i {
+  writing-mode: initial;
+  font-size: 125%;
+}
+#main {
+  position: absolute;
+  top: 0;
+  width: calc(100vw + 32vw + 17px);
+  height: 100%;
+  background: rgb(200, 200, 200);
+  display: flex;
+  transition: 0.5s left;
+}
+#main.backlog {
+  left: 0;
+}
+#main.board {
+  left: calc(-32vw - 17px);
+}
+#board {
+  width: 96vw;
+  height: 100%;
+  overflow-y: auto;
+}
+#board .lane {
+  width: 100%;
+  display: flex;
+  border-bottom: 4px solid white;
+  opacity: 1;
+  visibility: visible;
+  transition: visibility 0.5s, opacity 0.5s;
+}
+#board .hide {
+  opacity: 0;
+  visibility: hidden;
+}
+#board .lane .todo,
+#board .lane .inprogress,
+#board .lane .done {
+  width: calc(32vw);
+  height: 22vw;
+  padding: calc(1vw - 2px);
+  border-left: 2px solid rgb(210, 210, 210);
+  border-right: 2px solid rgb(210, 210, 210);
+}
+#board .lane .todo {
+  border-left: 0;
+  padding: calc(1vw - 1px);
+}
+#board .lane .done {
+  width: calc(32vw - 17px);
+  border-right: 0;
+  padding: calc(1vw - 1px);
+}
+.userstory {
+  position: relative;
+  text-decoration: none;
+  color: black;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  box-shadow: 5px 5px 7px rgba(33,33,33,.7);
+  height: 20vw;
+  width: 30vw;
+  z-index: 1;
+  transition: visibility 0.5s, opacity 0.5s;
+}
+.userstory .header {
+  display: grid;
+  grid-template-columns: min-content 1fr;
+  grid-column-gap: 1vw;
+  margin-bottom: 0.5rem;
+}
+.userstory .header .nr {
+  color: grey;
+}
+.userstory p {
+  overflow-y: auto;
+  height: 100%;
+  outline: none;
+}
+.userstory h1 {
+  outline: none;
+}
+.userstory.virtual {
+  opacity: 0.5;
+  border: 2px dashed black;
+  font-family: 'Indie Flower', cursive;
+  font-size: larger;
+  display: block;
+}
+.stage .userstory.virtual {
+  position: relative;
+  top: -20vw;
+}
+.stage .userstory.virtual:first-of-type {
+  top: 0;
+}
+.userstory.virtual i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18vw;
+  opacity: 0.1;
+}
+.userstory.virtual p {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: initial;
+}
+.task {
+  text-decoration:none;
+  color:black;
+  background:rgb(255,255,204);
+  border: 1px solid rgb(245,245,194);
+  display:block;
+  height:10vw;
+  width:10vw;
+  padding:0.5rem;
+  box-shadow: 5px 5px 7px rgba(33,33,33,.7);
+  overflow-y: auto;
+  z-index: 100;
+  transition: color 0.2s, left 1s, top 1s;
+}
+.task p {
+  overflow-y: auto;
+  height: 100%;
+  outline: none;
+}
+.stage {
+  position: relative;
+}
+.tasks .task {
+  position: absolute;
+}
+.userstory .tasks .task {
+  left: calc(100% - 11.5vw);
+  top: 1.5vw;
+}
+.task:nth-child(3n-2) {
+  transform:rotate(4deg);
+}
+.task:nth-child(2n) {
+  transform:rotate(-3deg);
+}
+.task:nth-child(3n) {
+  transform:rotate(2deg);
+}
+
+.userstory > .tasks > .task:nth-child(1).hover {
+  left: calc(100% - 11.5vw);
+  top: 1.5vw;
+}
+.userstory > .tasks > .task:nth-child(2).hover {
+  left: calc(100% - 9.5vw);
+  top: 5vw;
+}
+.userstory > .tasks > .task:nth-child(3).hover {
+  left: calc(100% - 11.5vw);
+  top: 8vw;
+}
+.userstory > .tasks > .task:nth-child(4).hover {
+  left: calc(100% - 9.5vw);
+  top: 11vw;
+}
+.userstory > .tasks > .task:nth-child(5).hover {
+  left: calc(100% - 18.5vw);
+  top: 2vw;
+}
+.userstory > .tasks > .task:nth-child(6).hover {
+  left: calc(100% - 16.5vw);
+  top: 5vw;
+}
+.userstory > .tasks > .task:nth-child(7).hover {
+  left: calc(100% - 18.5vw);
+  top: 8vw;
+}
+.userstory > .tasks > .task:nth-child(8).hover {
+  left: calc(100% - 16.5vw);
+  top: 11vw;
+}
+.userstory > .tasks > .task:nth-child(9).hover {
+  left: calc(100% - 25.5vw);
+  top: 2vw;
+}
+.userstory > .tasks > .task:nth-child(10).hover {
+  left: calc(100% - 23.5vw);
+  top: 5vw;
+}
+.userstory > .tasks > .task:nth-child(11).hover {
+  left: calc(100% - 25.5vw);
+  top: 8vw;
+}
+.userstory > .tasks > .task:nth-child(12).hover {
+  left: calc(100% - 23.5vw);
+  top: 11vw;
+}
+.userstory > .tasks > .task:nth-child(13).hover {
+  left: calc(100% - 32.5vw);
+  top: 2vw;
+}
+.userstory > .tasks > .task:nth-child(14).hover {
+  left: calc(100% - 30.5vw);
+  top: 5vw;
+}
+.userstory > .tasks > .task:nth-child(15).hover {
+  left: calc(100% - 32.5vw);
+  top: 8vw;
+}
+.userstory > .tasks > .task:nth-child(16).hover {
+  left: calc(100% - 30.5vw);
+  top: 11vw;
+}
+
+.stage > .tasks > .task:nth-child(1) {
+  left: 1vw;
+  top: 1vw;
+}
+.stage > .tasks > .task:nth-child(2) {
+  left: 7.5vw;
+  top: 1vw;
+}
+.stage > .tasks > .task:nth-child(3) {
+  left: 14vw;
+  top: 1vw;
+}
+.stage > .tasks > .task:nth-child(4) {
+  left: 20.5vw;
+  top: 1vw;
+}
+.stage > .tasks > .task:nth-child(5) {
+  left: 1vw;
+  top: 4.5vw;
+}
+.stage > .tasks > .task:nth-child(6) {
+  left: 7.5vw;
+  top: 4.5vw;
+}
+.stage > .tasks > .task:nth-child(7) {
+  left: 14vw;
+  top: 4.5vw;
+}
+.stage > .tasks > .task:nth-child(8) {
+  left: 20.5vw;
+  top: 4.5vw;
+}
+.stage > .tasks > .task:nth-child(9) {
+  left: 1vw;
+  top: 8vw;
+}
+.stage > .tasks > .task:nth-child(10) {
+  left: 7.5vw;
+  top: 8vw;
+}
+.stage > .tasks > .task:nth-child(11) {
+  left: 14vw;
+  top: 8vw;
+}
+.stage > .tasks > .task:nth-child(12) {
+  left: 20.5vw;
+  top: 8vw;
+}
+.stage > .tasks > .task:nth-child(13) {
+  left: 1vw;
+  top: 11.5vw;
+}
+.stage > .tasks > .task:nth-child(14) {
+  left: 7.5vw;
+  top: 11.5vw;
+}
+.stage > .tasks > .task:nth-child(15) {
+  left: 14vw;
+  top: 11.5vw;
+}
+.stage > .tasks > .task:nth-child(16) {
+  left: 20.5vw;
+  top: 11.5vw;
+}
+
+
+.userstory .tasks .hover {
+  color: grey;
+}
+.userstory .tasks .task.active {
+/*
+  box-shadow:10px 10px 7px rgba(0,0,0,.7);
+  transform: scale(1.1);
+  z-index: 10;
+*/
+  color: black;
+}
+.task.virtual {
+  opacity: 0.5;
+  border: 2px dashed lightgray;
+  font-family: 'Indie Flower', cursive;
+  font-size: larger;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5%;
+}
+.task.virtual i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8vw;
+  opacity: 0.1;
+}
+.button {
+  font-size: 4rem;
+}
+.backlogbar {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  writing-mode: tb-rl;
+}
