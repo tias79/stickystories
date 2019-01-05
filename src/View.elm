@@ -8,6 +8,8 @@ import Json.Decode as Json
 import List.Extra
 import Model exposing (Model, Msg, UIState)
 import US as US
+import USTask as Task
+import Board as Board
 import Html.Keyed as Keyed
 
 
@@ -64,7 +66,7 @@ view model =
         ]
 
 
-laneComponent : US.US -> Html Model.Msg
+laneComponent : US.T -> Html Model.Msg
 laneComponent us =
     let
         usStage =
@@ -74,29 +76,29 @@ laneComponent us =
             US.filterUsTasks us usStage
     in
     div [ class "lane" ]
-        [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.ToDo))
+        [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.ToDo))
             (case usStage of
-                US.ToDo ->
-                    [ userStoryCard (US.filterUsTasks us US.ToDo) ]
+                Board.ToDo ->
+                    [ userStoryCard (US.filterUsTasks us Board.ToDo) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.ToDo) ]
+                    [ tasks (US.filterUsTasks us Board.ToDo) ]
             )
-        , div ([ class "inprogress stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.InProgress))
+        , div ([ class "inprogress stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.InProgress))
             (case usStage of
-                US.InProgress ->
-                    [ userStoryCard (US.filterUsTasks us US.InProgress) ]
+                Board.InProgress ->
+                    [ userStoryCard (US.filterUsTasks us Board.InProgress) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.InProgress) ]
+                    [ tasks (US.filterUsTasks us Board.InProgress) ]
             )
-        , div ([ class "done stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.Done))
+        , div ([ class "done stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.Done))
             (case usStage of
-                US.Done ->
-                    [ userStoryCard (US.filterUsTasks us US.Done) ]
+                Board.Done ->
+                    [ userStoryCard (US.filterUsTasks us Board.Done) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.Done) ]
+                    [ tasks (US.filterUsTasks us Board.Done) ]
             )
         ]
 
@@ -118,7 +120,7 @@ virtualLaneComponent state =
         ]
 
 
-userStoryCard : US.US -> Html Model.Msg
+userStoryCard : US.T -> Html Model.Msg
 userStoryCard story =
     let
         hover =
@@ -148,7 +150,7 @@ userStoryCard story =
                 > 0
 
         allowNewTask =
-            if US.usBoardStage story /= US.ToDo then
+            if US.usBoardStage story /= Board.ToDo then
                 False
 
             else
@@ -181,7 +183,7 @@ userStoryCard story =
         ]
 
 
-taskCard : US.Task -> Bool -> Html Model.Msg
+taskCard : Task.T -> Bool -> Html Model.Msg
 taskCard task hover =
     div
         ([ classList
@@ -202,7 +204,7 @@ taskCard task hover =
         ]
 
 
-tasks : US.US -> Html Model.Msg
+tasks : US.T -> Html Model.Msg
 tasks us =
     div [ class "tasks" ]
         (List.map (\task -> taskCard task False) us.tasks)
@@ -244,7 +246,7 @@ virtualUserStoryCard hide button description attrs =
         ]
 
 
-newTask : US.US -> Bool -> Html Model.Msg
+newTask : US.T -> Bool -> Html Model.Msg
 newTask story hover =
     virtualTask story
         hover
@@ -255,7 +257,7 @@ newTask story hover =
         ]
 
 
-virtualTask : US.US -> Bool -> String -> String -> List (Attribute Msg) -> Html Model.Msg
+virtualTask : US.T -> Bool -> String -> String -> List (Attribute Msg) -> Html Model.Msg
 virtualTask story hover button description attrs =
     let
         active =

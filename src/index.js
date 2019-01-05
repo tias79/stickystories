@@ -8,7 +8,7 @@ var db = new PouchDB('sticky-stories');
 var app = Elm.Main.init({
   node: document.getElementById('root')
 });
-app.ports.pouch.subscribe(function(data) {
+app.ports.storePort.subscribe(function(data) {
   console.log("Port out: ", data);
 });
 

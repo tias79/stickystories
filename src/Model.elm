@@ -5,7 +5,9 @@ import Html5.DragDrop as DragDrop
 import Json.Encode as Encode
 import List.Extra
 import US as US
+import USTask as Task
 import Store as Store
+import Board as Board
 
 
 type UIState
@@ -14,30 +16,28 @@ type UIState
 
 
 type TaskDropTarget
-    = TaskDropOnUS US.US
-    | TaskDropOnBoard US.US US.BoardStage
+    = TaskDropOnUS US.T
+    | TaskDropOnBoard US.T Board.Stage
 
 
 type DragSource
-    = DragUS US.US
-    | DragTask US.Task
+    = DragUS US.T
+    | DragTask Task.T
 
 
 type DropTarget
-    = UserStoryDrop US.US
-    | BoardDrop US.US US.BoardStage
+    = UserStoryDrop US.T
+    | BoardDrop US.T Board.Stage
     | BacklogDrop
     | NewLaneDrop
 
 
 type alias Model =
-    { doneTask1ZIndex : Int
-    , doneTask2ZIndex : Int
-    , doneTask3ZIndex : Int
-    , dragDropUserStory : DragDrop.Model DragSource DropTarget
+    { dragDropUserStory : DragDrop.Model DragSource DropTarget
     , uiState : UIState
-    , userStories : List US.US
+    , userStories : List US.T
     , usModel : US.Model
+    , taskModel : Task.Model
     , input : String
     }
 
@@ -46,23 +46,22 @@ type Msg
     = DragDropUserStory (DragDrop.Msg DragSource DropTarget)
     | UpdateUIState UIState
     | NewUserStory
-    | SaveUSTitleInput US.US String
-    | SaveUSDescriptionInput US.US String
-    | SaveTaskDescriptionInput US.Task String
-    | NewTask US.US
-    | TaskActive US.Task Bool
-    | NewTaskActive US.US Bool
+    | SaveUSTitleInput US.T String
+    | SaveUSDescriptionInput US.T String
+    | SaveTaskDescriptionInput Task.T String
+    | NewTask US.T
+    | TaskActive Task.T Bool
+    | NewTaskActive US.T Bool
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { doneTask1ZIndex = 1
-      , doneTask2ZIndex = 2
-      , doneTask3ZIndex = 3
-      , dragDropUserStory = DragDrop.init
+    ( { 
+       dragDropUserStory = DragDrop.init
       , uiState = Board
       , userStories = []
       , usModel = US.init
+      , taskModel = Task.init
       , input = ""
       }
     , Cmd.none
@@ -105,13 +104,13 @@ update msg model =
                                                             (\us -> { us | tasks = List.map (\task -> { task | stage = newStage }) us.tasks })
                                             in
                                             case newStage of
-                                                US.ToDo ->
+                                                Board.ToDo ->
                                                     updateBoard
 
-                                                US.InProgress ->
+                                                Board.InProgress ->
                                                     model.userStories
 
-                                                US.Done ->
+                                                Board.Done ->
                                                     updateBoard
 
                                         DragTask draggedTask ->
@@ -209,8 +208,8 @@ update msg model =
 
         NewTask story ->
             let
-                ( newUSModel, newTask ) =
-                    US.newTask model.usModel
+                ( newTaskModel, newTask ) =
+                    Task.new model.taskModel
             in
             ( { model
                 | userStories =
@@ -228,7 +227,7 @@ update msg model =
                             }
                         )
                         model.userStories
-                , usModel = newUSModel
+                , taskModel = newTaskModel
               }
             , Cmd.none
             )
@@ -284,7 +283,7 @@ update msg model =
             )
 
 
-moveUserStory : List US.US -> US.US -> US.US -> List US.US
+moveUserStory : List US.T -> US.T -> US.T -> List US.T
 moveUserStory list src target =
     let
         targetMaybe =
@@ -318,7 +317,7 @@ moveUserStory list src target =
                 )
 
 
-moveTask : List US.US -> US.Task -> US.US -> List US.US
+moveTask : List US.T -> Task.T -> US.T -> List US.T
 moveTask list task target =
     list
         |> List.map (\us -> { us | tasks = List.filter (\t -> t.id /= task.id) us.tasks })
@@ -332,7 +331,7 @@ moveTask list task target =
             )
 
 
-updateUserStory : List US.US -> Int -> (US.US -> US.US) -> List US.US
+updateUserStory : List US.T -> Int -> (US.T -> US.T) -> List US.T
 updateUserStory userStories id modifier =
                     List.Extra.updateIf
                         (\us -> us.id == id)

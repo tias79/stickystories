@@ -2,19 +2,20 @@ port module Store exposing (putUS, putTask)
 
 import Json.Encode as Encode
 import US as US
+import USTask as Task
 
 
 port storePort : Encode.Value -> Cmd msg
 
 
-type StoreItem = StoreUS US.US | StoreTask US.Task
+type StoreItem = StoreUS US.T | StoreTask Task.T
 
 
-putUS : US.US -> Cmd msg
+putUS : US.T -> Cmd msg
 putUS us = put <| StoreUS us
 
 
-putTask : US.Task -> Cmd msg
+putTask : Task.T -> Cmd msg
 putTask task = put <| StoreTask task
 
 
@@ -22,7 +23,7 @@ put : StoreItem -> Cmd msg
 put item = storePort <| encodeItem item
 
 
-encodeUS : US.US -> Encode.Value
+encodeUS : US.T -> Encode.Value
 encodeUS us =
     Encode.object [
         ("id", Encode.int us.id),
@@ -31,7 +32,7 @@ encodeUS us =
         ]
 
 
-encodeTask : US.Task -> Encode.Value
+encodeTask : Task.T -> Encode.Value
 encodeTask task =
     Encode.object [
         ("id", Encode.int task.id),
