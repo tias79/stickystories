@@ -1,5 +1,6 @@
-module US exposing (BoardStage(..), Model, NewTaskState(..), Task, US, USStage(..), filterUsTasks, init, newTask, newUS, usBoardStage)
+module US exposing (BoardStage(..), Model, NewTaskState(..), Task, US, USStage(..), filterUsTasks, init, newTask, newUS, usBoardStage, encode)
 
+import Json.Encode as Encode
 
 type NewTaskState
     = Active Bool
@@ -91,3 +92,7 @@ usBoardStage us =
 filterUsTasks : US -> BoardStage -> US
 filterUsTasks us stage =
     { us | tasks = List.filter (\task -> task.stage == stage) us.tasks }
+
+
+encode : US -> Encode.Value
+encode us = Encode.object [ ("id", Encode.int us.id), ("name", Encode.string us.name), ("description", Encode.string us.description)]

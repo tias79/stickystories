@@ -2,8 +2,10 @@ module Model exposing (DragSource(..), DropTarget(..), Model, Msg(..), UIState(.
 
 import Html.Events exposing (..)
 import Html5.DragDrop as DragDrop
+import Json.Encode as Encode
 import List.Extra
 import US as US
+import Store as Store
 
 
 type UIState
@@ -69,7 +71,7 @@ init =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case (Debug.log "UserStoryDrop" msg) of
+    case msg of
         DragDropUserStory msg_ ->
             let
                 ( model_, result ) =
@@ -164,10 +166,20 @@ update msg model =
             )
 
         SaveUSTitleInput story str ->
-            ( { model | userStories = List.Extra.updateIf (\us -> us.id == story.id) (\us -> { us | name = str }) model.userStories }, Cmd.none )
+            let
+                storyModifier = \us -> { us | name = str }
+            in
+                ( { model
+                    | userStories = updateUserStory model.userStories story.id storyModifier
+                }, Store.putUS <| storyModifier story )
 
         SaveUSDescriptionInput story str ->
-            ( { model | userStories = List.Extra.updateIf (\us -> us.id == story.id) (\us -> { us | description = str }) model.userStories }, Cmd.none )
+            let
+                storyModifier = \us -> { us | description = str }
+            in
+                ( { model
+                    | userStories = updateUserStory model.userStories story.id storyModifier
+                }, Store.putUS <| storyModifier story )
 
         SaveTaskDescriptionInput task str ->
             ( { model
@@ -318,3 +330,11 @@ moveTask list task target =
                 else
                     us
             )
+
+
+updateUserStory : List US.US -> Int -> (US.US -> US.US) -> List US.US
+updateUserStory userStories id modifier =
+                    List.Extra.updateIf
+                        (\us -> us.id == id)
+                        modifier
+                        userStories
