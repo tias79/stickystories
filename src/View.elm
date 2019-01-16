@@ -40,7 +40,7 @@ view model =
             if model.uiState == Model.Backlog then
                 ShowLaneDrop
             else
-                if List.length model.userStories == 0 then
+                if US.count model.usModel == 0 then
                     ShowBacklogHint
                 else
                     HideVirtualLane
@@ -48,17 +48,15 @@ view model =
     
     div [ id "main", class <| mainClass model ]
         [ div ([ id "backlog" ] ++ DragDrop.droppable Model.DragDropUserStory Model.BacklogDrop)
-            ((model.userStories
-                |> List.filter (\us -> us.stage == US.Backlog)
-                |> List.map (\story -> userStoryCard story)
+            ((US.filter model.usModel US.Backlog
+                |> List.map (\story -> userStoryCard story (Task.tasks model.taskModel story.id))
              )
                 ++ [ newUserStoryCard ]
             )
         , div [ class "bar", onClick <| toggleBacklog model ] [ text "BACKLOG", i [ class "button material-icons" ] [ text "chevron_left" ] ]
         , div [ id "board" ]
-            ((model.userStories
-                |> List.filter (\us -> us.stage /= US.Backlog)
-                |> List.map (\us -> laneComponent us)
+            ((US.filter model.usModel US.Board
+                |> List.map (\us -> laneComponent us (Task.tasks model.taskModel us.id))
              )
                 ++ [ virtualLaneComponent virtualLaneState ]
             )
@@ -66,39 +64,36 @@ view model =
         ]
 
 
-laneComponent : US.T -> Html Model.Msg
-laneComponent us =
+laneComponent : US.T -> List Task.T -> Html Model.Msg
+laneComponent us tasks =
     let
-        usStage =
-            US.usBoardStage us
-
-        filteredUS =
-            US.filterUsTasks us usStage
+        usStage = Task.boardStage tasks
+        filteredTasks = \stage -> tasks |> List.filter (\task -> task.stage == stage)
     in
     div [ class "lane" ]
         [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.ToDo))
             (case usStage of
                 Board.ToDo ->
-                    [ userStoryCard (US.filterUsTasks us Board.ToDo) ]
+                    [ userStoryCard us (filteredTasks Board.ToDo) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us Board.ToDo) ]
+                    [ tasksContainer (filteredTasks Board.ToDo) ]
             )
         , div ([ class "inprogress stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.InProgress))
             (case usStage of
                 Board.InProgress ->
-                    [ userStoryCard (US.filterUsTasks us Board.InProgress) ]
+                    [ userStoryCard us (filteredTasks Board.InProgress) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us Board.InProgress) ]
+                    [ tasksContainer (filteredTasks Board.InProgress) ]
             )
         , div ([ class "done stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.Done))
             (case usStage of
                 Board.Done ->
-                    [ userStoryCard (US.filterUsTasks us Board.Done) ]
+                    [ userStoryCard us (filteredTasks Board.Done) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us Board.Done) ]
+                    [ tasksContainer (filteredTasks Board.Done) ]
             )
         ]
 
@@ -120,11 +115,11 @@ virtualLaneComponent state =
         ]
 
 
-userStoryCard : US.T -> Html Model.Msg
-userStoryCard story =
+userStoryCard : US.T -> List Task.T -> Html Model.Msg
+userStoryCard story storytasks =
     let
         hover =
-            (story.tasks
+            (storytasks
                 |> List.map
                     (\task ->
                         if task.active then
@@ -150,7 +145,7 @@ userStoryCard story =
                 > 0
 
         allowNewTask =
-            if US.usBoardStage story /= Board.ToDo then
+            if Task.boardStage storytasks /= Board.ToDo then
                 False
 
             else
@@ -172,7 +167,7 @@ userStoryCard story =
             ]
         , Keyed.node "p" [ contenteditable True, on "blur" (Json.map (Model.SaveUSDescriptionInput story) targetTextContent) ] [ ("usdesc", text story.description) ]
         , div [ class "tasks" ]
-            (List.map (\task -> taskCard task hover) story.tasks
+            (List.map (\task -> taskCard task hover) storytasks
                 ++ (if allowNewTask then
                         [ newTask story hover ]
 
@@ -204,10 +199,10 @@ taskCard task hover =
         ]
 
 
-tasks : US.T -> Html Model.Msg
-tasks us =
+tasksContainer : List Task.T -> Html Model.Msg
+tasksContainer tasks =
     div [ class "tasks" ]
-        (List.map (\task -> taskCard task False) us.tasks)
+        (List.map (\task -> taskCard task False) tasks)
 
 
 targetTextContent : Json.Decoder String

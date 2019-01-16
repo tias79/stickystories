@@ -8,6 +8,8 @@ import US as US
 import USTask as Task
 import Store as Store
 import Board as Board
+import Dict exposing (Dict)
+import Set exposing (Set)
 
 
 type UIState
@@ -35,7 +37,6 @@ type DropTarget
 type alias Model =
     { dragDropUserStory : DragDrop.Model DragSource DropTarget
     , uiState : UIState
-    , userStories : List US.T
     , usModel : US.Model
     , taskModel : Task.Model
     , input : String
@@ -59,7 +60,6 @@ init =
     ( { 
        dragDropUserStory = DragDrop.init
       , uiState = Board
-      , userStories = []
       , usModel = US.init
       , taskModel = Task.init
       , input = ""
@@ -78,70 +78,102 @@ update msg model =
             in
             ( { model
                 | dragDropUserStory = model_
-                , userStories =
+                , usModel =
                     case result of
                         Nothing ->
-                            model.userStories
+                            model.usModel
 
                         Just ( src, target, _ ) ->
                             case target of
                                 UserStoryDrop targetUS ->
                                     case src of
                                         DragUS srcUS ->
-                                            moveUserStory model.userStories srcUS targetUS
+                                            US.move model.usModel srcUS.id targetUS.id
 
                                         DragTask task ->
-                                            moveTask model.userStories task targetUS
+                                            model.usModel
 
                                 BoardDrop targetUS newStage ->
                                     case src of
                                         DragUS srcUS ->
                                             let
                                                 updateBoard =
-                                                    moveUserStory model.userStories srcUS targetUS
-                                                        |> List.Extra.updateIf
-                                                            (\us -> us.id == srcUS.id)
-                                                            (\us -> { us | tasks = List.map (\task -> { task | stage = newStage }) us.tasks })
+                                                    US.move model.usModel srcUS.id targetUS.id
                                             in
                                             case newStage of
                                                 Board.ToDo ->
-                                                    updateBoard
+                                                   updateBoard
 
                                                 Board.InProgress ->
-                                                    model.userStories
+                                                    model.usModel
 
                                                 Board.Done ->
                                                     updateBoard
 
                                         DragTask draggedTask ->
-                                            model.userStories
-                                                |> List.Extra.updateIf (\us -> us.id == targetUS.id)
-                                                    (\us ->
-                                                        { us
-                                                            | tasks =
-                                                                List.Extra.updateIf (\task -> task.id == draggedTask.id)
-                                                                    (\task -> { task | stage = newStage })
-                                                                    us.tasks
-                                                        }
-                                                    )
+                                            model.usModel
 
                                 NewLaneDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            List.filter (\us -> us.id /= srcUS.id) model.userStories
-                                                ++ [ { srcUS | stage = US.Board } ]
+                                            US.updateUSStage model.usModel srcUS.id US.Board
 
                                         DragTask task ->
-                                            model.userStories
+                                            model.usModel
 
                                 BacklogDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            List.filter (\us -> us.id /= srcUS.id) model.userStories
-                                                ++ [ { srcUS | stage = US.Backlog } ]
+                                            US.updateUSStage model.usModel srcUS.id US.Backlog
 
                                         DragTask task ->
-                                            model.userStories
+                                            model.usModel
+                , taskModel =
+                   case result of
+                        Nothing ->
+                            model.taskModel
+
+                        Just ( src, target, _ ) ->
+                            case target of
+                                UserStoryDrop targetUS ->
+                                    case src of
+                                        DragUS srcUS ->
+                                            model.taskModel
+
+                                        DragTask task ->
+                                            Task.move model.taskModel task.id targetUS.id
+
+                                BoardDrop targetUS newStage ->
+                                    case src of
+                                        DragUS srcUS ->
+                                            case newStage of
+                                                Board.ToDo ->
+                                                   Task.updateBoardStage model.taskModel srcUS.id newStage 
+
+                                                Board.InProgress ->
+                                                    model.taskModel
+
+                                                Board.Done ->
+                                                   Task.updateBoardStage model.taskModel srcUS.id newStage 
+
+                                        DragTask draggedTask ->
+                                            Task.updateBoardStage model.taskModel targetUS.id newStage
+
+                                NewLaneDrop ->
+                                    case src of
+                                        DragUS srcUS ->
+                                            model.taskModel
+
+                                        DragTask task ->
+                                            model.taskModel
+
+                                BacklogDrop ->
+                                    case src of
+                                        DragUS srcUS ->
+                                            model.taskModel
+
+                                        DragTask task ->
+                                            model.taskModel
               }
             , Cmd.none
             )
@@ -150,190 +182,57 @@ update msg model =
             ( { model | uiState = state }, Cmd.none )
 
         NewUserStory ->
-            let
-                ( newUSModel, newUS ) =
-                    US.newUS model.usModel
-            in
             ( { model
-                | userStories =
-                    model.userStories
-                        ++ [ newUS
-                           ]
-                , usModel = newUSModel
+                | usModel = US.new model.usModel
               }
             , Cmd.none
             )
 
         SaveUSTitleInput story str ->
-            let
-                storyModifier = \us -> { us | name = str }
-            in
-                ( { model
-                    | userStories = updateUserStory model.userStories story.id storyModifier
-                }, Store.putUS <| storyModifier story )
+            ( { model
+                | usModel = US.updateName model.usModel story.id str
+            }, Store.putUS story )
 
         SaveUSDescriptionInput story str ->
-            let
-                storyModifier = \us -> { us | description = str }
-            in
-                ( { model
-                    | userStories = updateUserStory model.userStories story.id storyModifier
-                }, Store.putUS <| storyModifier story )
+            ( { model
+                | usModel = US.updateDescription model.usModel story.id str
+            }, Store.putUS story )
 
         SaveTaskDescriptionInput task str ->
             ( { model
-                | userStories =
-                    model.userStories
-                        |> List.map
-                            (\story ->
-                                { story
-                                    | tasks =
-                                        List.map
-                                            (\t ->
-                                                { t
-                                                    | description =
-                                                        if task.id == t.id then
-                                                            str
-
-                                                        else
-                                                            t.description
-                                                }
-                                            )
-                                            story.tasks
-                                }
-                            )
+                | taskModel = Task.updateDescription model.taskModel task.id str
               }
-            , Cmd.none
+            , Store.putTask task
             )
 
         NewTask story ->
-            let
-                ( newTaskModel, newTask ) =
-                    Task.new model.taskModel
-            in
             ( { model
-                | userStories =
-                    List.Extra.updateIf
-                        (\us -> us.id == story.id)
-                        (\us ->
-                            { us
-                                | tasks = us.tasks ++ [ newTask ]
-                                , newTaskState =
-                                    if List.length us.tasks == 15 then
-                                        US.NotAllowed
-
-                                    else
-                                        us.newTaskState
-                            }
-                        )
-                        model.userStories
-                , taskModel = newTaskModel
+                | taskModel = Task.new model.taskModel story.id
               }
             , Cmd.none
             )
 
         TaskActive task active ->
             ( { model
-                | userStories =
-                    model.userStories
-                        |> List.map
-                            (\us ->
-                                { us
-                                    | tasks =
-                                        us.tasks
-                                            |> List.map
-                                                (\t ->
-                                                    { t
-                                                        | active =
-                                                            if t.id == task.id then
-                                                                active
-
-                                                            else
-                                                                t.active
-                                                    }
-                                                )
-                                }
-                            )
+                | taskModel = Task.updateActive model.taskModel task.id active
               }
             , Cmd.none
             )
 
         NewTaskActive story active ->
             ( { model
-                | userStories =
-                    model.userStories
-                        |> List.map
-                            (\us ->
-                                { us
-                                    | newTaskState =
-                                        case us.newTaskState of
+                | 
+                usModel = US.updateNewTaskState model.usModel story.id (
+                                        case story.newTaskState of
                                             US.Active _ ->
-                                                if us.id == story.id then
+                                                if story.id == story.id then
                                                     US.Active active
 
                                                 else
-                                                    us.newTaskState
+                                                    story.newTaskState
 
                                             US.NotAllowed ->
-                                                us.newTaskState
-                                }
-                            )
+                                                story.newTaskState)
               }
             , Cmd.none
             )
-
-
-moveUserStory : List US.T -> US.T -> US.T -> List US.T
-moveUserStory list src target =
-    let
-        targetMaybe =
-            List.Extra.find (\x -> x.id == target.id) list
-    in
-    if src.id == target.id then
-        list
-
-    else
-        list
-            |> List.filter (\us -> us.id /= src.id)
-            |> List.map
-                (\us ->
-                    if us.id == target.id then
-                        list
-                            |> List.filter (\x -> x.id == src.id || x.id == target.id)
-                            |> List.reverse
-
-                    else
-                        [ us ]
-                )
-            |> List.concat
-            |> List.Extra.updateIf (\us -> us.id == src.id)
-                (\srcUs ->
-                    case targetMaybe of
-                        Nothing ->
-                            srcUs
-
-                        Just targetUs ->
-                            { srcUs | stage = targetUs.stage }
-                )
-
-
-moveTask : List US.T -> Task.T -> US.T -> List US.T
-moveTask list task target =
-    list
-        |> List.map (\us -> { us | tasks = List.filter (\t -> t.id /= task.id) us.tasks })
-        |> List.map
-            (\us ->
-                if us.id == target.id then
-                    { us | tasks = us.tasks ++ [ task ] }
-
-                else
-                    us
-            )
-
-
-updateUserStory : List US.T -> Int -> (US.T -> US.T) -> List US.T
-updateUserStory userStories id modifier =
-                    List.Extra.updateIf
-                        (\us -> us.id == id)
-                        modifier
-                        userStories
