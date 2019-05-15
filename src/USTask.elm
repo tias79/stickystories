@@ -1,10 +1,11 @@
-module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateDescription, updateActive, tasks)
+module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateDescription, updateActive, tasks, toJson)
 
 
 import Board as Board
 import US as US
 import Set exposing (Set)
 import List.Extra
+import Json.Encode as Encode
 
 
 type alias Id = Int
@@ -103,3 +104,38 @@ tasks : Model -> US.Id -> List T
 tasks model usId =
         model.tasks
             |> List.filter (\task -> task.usId == usId)
+
+
+encode : Maybe T -> T -> Maybe T -> Encode.Value
+encode prevTask curTask nextTask =
+    Encode.object [
+        ("id", Encode.int curTask.id),
+        ("prevId", case prevTask of
+            Nothing -> Encode.int -1
+            Just task -> Encode.int task.id),
+        ("nextId", case nextTask of
+            Nothing -> Encode.int -1
+            Just task -> Encode.int task.id),
+        ("description", Encode.string curTask.description),
+        ("stage", case curTask.stage of
+            Board.ToDo -> Encode.string "ToDo"
+            Board.InProgress -> Encode.string "InProgress"
+            Board.Done -> Encode.string "Done"),
+        ("usId", Encode.int curTask.usId)
+        ]
+
+
+toJson : Model -> Encode.Value
+toJson model = toJsonRec Nothing model.tasks |> Encode.list (\x -> x)
+
+
+toJsonRec : Maybe T -> List T -> List Encode.Value
+toJsonRec prevUs tasklist =
+    let
+        curUs = List.head tasklist
+        tail = Maybe.withDefault [] (List.tail tasklist)
+        nextUs = tail |> List.head
+    in    
+        case curUs of
+            Nothing -> []
+            Just us -> [ encode prevUs us nextUs ] ++ toJsonRec curUs tail

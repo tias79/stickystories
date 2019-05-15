@@ -1,15 +1,11 @@
-module Model exposing (DragSource(..), DropTarget(..), Model, Msg(..), UIState(..), init, update)
+port module Model exposing (DragSource(..), DropTarget(..), Model, Msg(..), UIState(..), init, update)
 
 import Html.Events exposing (..)
 import Html5.DragDrop as DragDrop
-import Json.Encode as Encode
-import List.Extra
 import US as US
 import USTask as Task
-import Store as Store
 import Board as Board
-import Dict exposing (Dict)
-import Set exposing (Set)
+import Json.Encode as Encode
 
 
 type UIState
@@ -182,42 +178,46 @@ update msg model =
             ( { model | uiState = state }, Cmd.none )
 
         NewUserStory ->
-            ( { model
-                | usModel = US.new model.usModel
-              }
-            , Cmd.none
-            )
+            let
+                newUSModel = US.new model.usModel
+                newModel = { model | usModel = newUSModel }
+            in
+                ( newModel, put newModel )
 
         SaveUSTitleInput story str ->
-            ( { model
-                | usModel = US.updateName model.usModel story.id str
-            }, Store.putUS story )
+            let
+                newUSModel = US.updateName model.usModel story.id str
+                newModel = { model | usModel = newUSModel }
+            in
+                (newModel, put newModel )
 
         SaveUSDescriptionInput story str ->
-            ( { model
-                | usModel = US.updateDescription model.usModel story.id str
-            }, Store.putUS story )
+            let
+                newUSModel = US.updateDescription model.usModel story.id str
+                newModel = { model | usModel = newUSModel }
+            in
+                ( newModel, put newModel )
 
         SaveTaskDescriptionInput task str ->
-            ( { model
-                | taskModel = Task.updateDescription model.taskModel task.id str
-              }
-            , Store.putTask task
-            )
+            let
+                newTaskModel = Task.updateDescription model.taskModel task.id str
+                newModel = { model | taskModel = Task.updateDescription model.taskModel task.id str }
+            in
+                ( newModel, put newModel )
 
         NewTask story ->
-            ( { model
-                | taskModel = Task.new model.taskModel story.id
-              }
-            , Cmd.none
-            )
+            let
+                newTaskModel = Task.new model.taskModel story.id
+                newModel = { model | taskModel = newTaskModel }
+            in
+                ( newModel, put newModel )
 
         TaskActive task active ->
-            ( { model
-                | taskModel = Task.updateActive model.taskModel task.id active
-              }
-            , Cmd.none
-            )
+            let
+                newTaskModel = Task.updateActive model.taskModel task.id active
+                newModel = { model | taskModel = Task.updateActive model.taskModel task.id active }
+            in
+                ( newModel, put newModel )
 
         NewTaskActive story active ->
             ( { model
@@ -236,3 +236,10 @@ update msg model =
               }
             , Cmd.none
             )
+
+
+port storePort : Encode.Value -> Cmd msg
+
+
+put : Model -> Cmd Msg
+put model = storePort <| Encode.object [("userStories", US.toJson model.usModel), ("tasks", Task.toJson model.taskModel)]
