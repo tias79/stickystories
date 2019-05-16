@@ -38,43 +38,45 @@ init =
     }
 
 
-new : Model -> Model
+new : Model -> (T, Model)
 new model =
-    ( { model
-        | nextUserStoryId = model.nextUserStoryId + 1
-        , userStories = model.userStories ++
-            [{ id = model.nextUserStoryId
+    let
+        newUS = { id = model.nextUserStoryId
                 , name = ""
                 , description = ""
                 , stage = Backlog
                 , newTaskState = Active False
-            }]
-    })
+            }
+    in
+        ( newUS, { model
+            | nextUserStoryId = model.nextUserStoryId + 1
+            , userStories = model.userStories ++ [ newUS ]
+        })
 
 
-update : Model -> Id -> (T -> T) -> Model
+update : Model -> Id -> (T -> T) -> (Maybe T, Model)
 update model usId modifier =
-    ( { model | userStories = List.Extra.updateIf
-                        (\us -> us.id == usId)
-                        modifier
-                        model.userStories
-    } )
+    let
+        matchingUS = List.head (List.filter (\us -> us.id == usId) model.userStories)
+        newUserStories = List.map (\us -> if us.id == usId then modifier us else us) model.userStories
+    in
+        ( matchingUS, { model | userStories = newUserStories } )
 
 
-updateName : Model -> Id -> String -> Model
+updateName : Model -> Id -> String -> (Maybe T, Model)
 updateName model usId name = update model usId (\us -> { us | name = name })
 
 
-updateDescription : Model -> Id -> String -> Model
+updateDescription : Model -> Id -> String -> (Maybe T, Model)
 updateDescription model usId description = update model usId (\us -> { us | description = description })
 
 
-updateUSStage : Model -> Id -> USStage -> Model
+updateUSStage : Model -> Id -> USStage -> (Maybe T, Model)
 updateUSStage model usId stage = update model usId (\us -> { us | stage = stage })
 
 
 updateNewTaskState : Model -> Id -> NewTaskState -> Model
-updateNewTaskState model usId state = update model usId (\us -> { us | newTaskState = state })
+updateNewTaskState model usId state = Tuple.second <| update model usId (\us -> { us | newTaskState = state })
 
 
 type USStage
@@ -127,35 +129,12 @@ count model =
     List.length model.userStories
 
 
-encode : Maybe T -> T -> Maybe T -> Encode.Value
-encode prevUs curUs nextUs =
-    Encode.object [
-        ("id", Encode.int curUs.id),
-        ("prevId", case prevUs of
-            Nothing -> Encode.int -1
-            Just us -> Encode.int us.id),
-        ("nextId", case nextUs of
-            Nothing -> Encode.int -1
-            Just us -> Encode.int us.id),
-        ("name", Encode.string curUs.name),
-        ("description", Encode.string curUs.description),
-        ("stage", case curUs.stage of
+toJson : T -> Encode.Value
+toJson us = Encode.object [
+        ("id", Encode.int us.id),
+        ("name", Encode.string us.name),
+        ("description", Encode.string us.description),
+        ("stage", case us.stage of
             Backlog -> Encode.string "Backlog"
             Board -> Encode.string "Board")
         ]
-
-
-toJson : Model -> Encode.Value
-toJson model = toJsonRec Nothing model.userStories |> Encode.list (\x -> x)
-
-
-toJsonRec : Maybe T -> List T -> List Encode.Value
-toJsonRec prevUs userStories =
-    let
-        curUs = List.head userStories
-        tail = Maybe.withDefault [] (List.tail userStories)
-        nextUs = tail |> List.head
-    in    
-        case curUs of
-            Nothing -> []
-            Just us -> [ encode prevUs us nextUs ] ++ toJsonRec curUs tail

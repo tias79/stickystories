@@ -112,7 +112,7 @@ update msg model =
                                 NewLaneDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            US.updateUSStage model.usModel srcUS.id US.Board
+                                            Tuple.second <| US.updateUSStage model.usModel srcUS.id US.Board
 
                                         DragTask task ->
                                             model.usModel
@@ -120,7 +120,7 @@ update msg model =
                                 BacklogDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            US.updateUSStage model.usModel srcUS.id US.Backlog
+                                            Tuple.second <| US.updateUSStage model.usModel srcUS.id US.Backlog
 
                                         DragTask task ->
                                             model.usModel
@@ -179,45 +179,58 @@ update msg model =
 
         NewUserStory ->
             let
-                newUSModel = US.new model.usModel
+                (newUS, newUSModel) = US.new model.usModel
                 newModel = { model | usModel = newUSModel }
             in
-                ( newModel, put newModel )
+                ( newModel, putUS newUS )
 
         SaveUSTitleInput story str ->
             let
-                newUSModel = US.updateName model.usModel story.id str
+                (newUS, newUSModel) = US.updateName model.usModel story.id str
                 newModel = { model | usModel = newUSModel }
             in
-                (newModel, put newModel )
+                (newModel, 
+                    case newUS of
+                        Nothing -> Cmd.none 
+                        Just us -> putUS us )
 
         SaveUSDescriptionInput story str ->
             let
-                newUSModel = US.updateDescription model.usModel story.id str
+                (newUS, newUSModel) = US.updateDescription model.usModel story.id str
                 newModel = { model | usModel = newUSModel }
             in
-                ( newModel, put newModel )
+                (newModel, 
+                    case newUS of
+                        Nothing -> Cmd.none 
+                        Just us -> putUS us )
 
         SaveTaskDescriptionInput task str ->
             let
-                newTaskModel = Task.updateDescription model.taskModel task.id str
-                newModel = { model | taskModel = Task.updateDescription model.taskModel task.id str }
+                (newTask, newTaskModel) = Task.updateDescription model.taskModel task.id str
+                newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, put newModel )
+                ( newModel, 
+                    case newTask of
+                        Nothing -> Cmd.none 
+                        Just t -> putTask t )
 
         NewTask story ->
             let
-                newTaskModel = Task.new model.taskModel story.id
+                (newTask, newTaskModel) = Task.new model.taskModel story.id
                 newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, put newModel )
+                ( newModel, putTask newTask )
+
 
         TaskActive task active ->
             let
-                newTaskModel = Task.updateActive model.taskModel task.id active
-                newModel = { model | taskModel = Task.updateActive model.taskModel task.id active }
+                (newTask, newTaskModel) = Task.updateActive model.taskModel task.id active
+                newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, put newModel )
+                ( newModel, case newTask of
+                        Nothing -> Cmd.none 
+                        Just t -> putTask t )
+
 
         NewTaskActive story active ->
             ( { model
@@ -241,5 +254,9 @@ update msg model =
 port storePort : Encode.Value -> Cmd msg
 
 
-put : Model -> Cmd Msg
-put model = storePort <| Encode.object [("userStories", US.toJson model.usModel), ("tasks", Task.toJson model.taskModel)]
+putUS : US.T -> Cmd Msg
+putUS us = storePort <| Encode.object [("type", Encode.string "US"), ("obj", US.toJson us)]
+
+
+putTask : Task.T -> Cmd Msg
+putTask task = storePort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toJson task)]
