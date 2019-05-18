@@ -6,9 +6,10 @@ import US as US
 import Set exposing (Set)
 import List.Extra
 import Json.Encode as Encode
+import EntityUUID
 
 
-type alias Id = Int
+type alias Id = EntityUUID.T
 
 
 type alias T =
@@ -22,15 +23,15 @@ type alias T =
 
 type alias Model =
     {
-        nextTaskId : Id,
+        uuidModel : EntityUUID.Model,
         tasks : List T
     }
 
 
-init : Model
-init =
+init : Int -> Model
+init initialSeed =
     {
-        nextTaskId = 1,
+        uuidModel = EntityUUID.init initialSeed,
         tasks = []
     }
 
@@ -38,7 +39,8 @@ init =
 new : Model -> US.Id -> (T, Model)
 new model usId =
     let
-        newTask = { id = model.nextTaskId
+        (newUUID, newUUIDModel) = EntityUUID.generate model.uuidModel
+        newTask = { id = newUUID
                 , description = ""
                 , stage = Board.ToDo
                 , active = False
@@ -46,7 +48,7 @@ new model usId =
             }
     in
         ( newTask, { model
-            | nextTaskId = model.nextTaskId + 1
+            | uuidModel = newUUIDModel
             , tasks = model.tasks ++
                 [ newTask ]
         } )
@@ -111,11 +113,11 @@ tasks model usId =
 
 toJson : T -> Encode.Value
 toJson task = Encode.object [
-        ("id", Encode.int task.id),
+        ("id", EntityUUID.toJson task.id),
         ("description", Encode.string task.description),
         ("stage", case task.stage of
             Board.ToDo -> Encode.string "ToDo"
             Board.InProgress -> Encode.string "InProgress"
             Board.Done -> Encode.string "Done"),
-        ("usId", Encode.int task.usId)
+        ("usId", EntityUUID.toJson task.usId)
         ]

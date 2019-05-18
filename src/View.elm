@@ -162,7 +162,7 @@ userStoryCard story storytasks =
             ++ DragDrop.droppable Model.DragDropUserStory (Model.UserStoryDrop story)
         )
         [ div [ class "header" ]
-            [ h1 [ class "nr" ] [ text <| "#" ++ String.fromInt story.id ]
+            [ h1 [ class "nr" ] [ text <| "#" ]
             , Keyed.node "h1" [ contenteditable True, on "blur" (Json.map (Model.SaveUSTitleInput story) targetTextContent) ] [ ("usname", text story.name) ]
             ]
         , Keyed.node "p" [ contenteditable True, on "blur" (Json.map (Model.SaveUSDescriptionInput story) targetTextContent) ] [ ("usdesc", text story.description) ]

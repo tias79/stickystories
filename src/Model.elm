@@ -7,7 +7,6 @@ import USTask as Task
 import Board as Board
 import Json.Encode as Encode
 
-
 type UIState
     = Board
     | Backlog
@@ -51,13 +50,13 @@ type Msg
     | NewTaskActive US.T Bool
 
 
-init : ( Model, Cmd Msg )
-init =
+init : ( Int, Int ) -> ( Model, Cmd Msg )
+init ( usInitialSeed, taskInitialSeed ) =
     ( { 
        dragDropUserStory = DragDrop.init
       , uiState = Board
-      , usModel = US.init
-      , taskModel = Task.init
+      , usModel = US.init usInitialSeed
+      , taskModel = Task.init taskInitialSeed
       , input = ""
       }
     , Cmd.none

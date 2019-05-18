@@ -4,6 +4,8 @@ import Board as Board
 import Set exposing (Set)
 import List.Extra
 import Json.Encode as Encode
+import Random
+import EntityUUID
 
 
 type NewTaskState
@@ -11,7 +13,7 @@ type NewTaskState
     | NotAllowed
 
 
-type alias Id = Int
+type alias Id = EntityUUID.T
 
 
 type alias T =
@@ -25,15 +27,15 @@ type alias T =
 
 type alias Model =
     {
-        nextUserStoryId : Id,
+        uuidModel : EntityUUID.Model,
         userStories : List T
     }
 
 
-init : Model
-init =
+init : Int -> Model
+init seed =
     {
-        nextUserStoryId = 1,
+        uuidModel = EntityUUID.init seed,
         userStories = []
     }
 
@@ -41,7 +43,8 @@ init =
 new : Model -> (T, Model)
 new model =
     let
-        newUS = { id = model.nextUserStoryId
+        (newUUID, newUUIDModel) = EntityUUID.generate model.uuidModel
+        newUS = { id = newUUID
                 , name = ""
                 , description = ""
                 , stage = Backlog
@@ -49,8 +52,8 @@ new model =
             }
     in
         ( newUS, { model
-            | nextUserStoryId = model.nextUserStoryId + 1
-            , userStories = model.userStories ++ [ newUS ]
+            | userStories = model.userStories ++ [ newUS ]
+            , uuidModel = newUUIDModel
         })
 
 
@@ -131,7 +134,7 @@ count model =
 
 toJson : T -> Encode.Value
 toJson us = Encode.object [
-        ("id", Encode.int us.id),
+        ("id", EntityUUID.toJson us.id),
         ("name", Encode.string us.name),
         ("description", Encode.string us.description),
         ("stage", case us.stage of

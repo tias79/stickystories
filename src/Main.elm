@@ -5,11 +5,11 @@ import Browser
 import Model exposing (init, update, Model, Msg)
 import View exposing (view)
 
-main : Program () Model Msg
+main : Program (Int, Int) Model Msg
 main =
     Browser.element
         { view = view
-        , init = \_ -> init
+        , init = init 
         , update = update
         , subscriptions = always Sub.none
         }
