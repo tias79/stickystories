@@ -1,4 +1,4 @@
-module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateDescription, updateActive, tasks, toJson)
+module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateTaskBoardStage, updateDescription, updateActive, tasks, toJson)
 
 
 import Board as Board
@@ -59,13 +59,13 @@ count model usId =
     List.length <| List.filter (\task -> task.usId == usId) model.tasks
 
 
-move : Model -> Id -> US.Id-> Model
+move : Model -> Id -> US.Id -> Model
 move model taskId targetUSId =
     ( { model 
         | tasks =
             List.Extra.updateIf
                 (\task -> task.id == taskId)
-                (\task -> { task | usId = targetUSId } )
+                (\task -> { task | usId = targetUSId, stage = Board.ToDo } )
                 model.tasks
     } )
 
@@ -86,6 +86,10 @@ boardStage list =
 
 updateBoardStage : Model -> US.Id -> Board.Stage -> Model
 updateBoardStage model usId stage = { model | tasks = List.Extra.updateIf (\task -> task.usId == usId) (\task -> { task | stage = stage}) model.tasks }
+
+
+updateTaskBoardStage : Model -> Id -> Board.Stage -> Model
+updateTaskBoardStage model taskId stage = { model | tasks = List.Extra.updateIf (\task -> task.id == taskId) (\task -> { task | stage = stage}) model.tasks }
 
 
 update : Model -> Id -> (T -> T) -> (Maybe T, Model)

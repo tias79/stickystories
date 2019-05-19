@@ -152,7 +152,7 @@ update msg model =
                                                    Task.updateBoardStage model.taskModel srcUS.id newStage 
 
                                         DragTask draggedTask ->
-                                            Task.updateBoardStage model.taskModel targetUS.id newStage
+                                            Task.updateTaskBoardStage model.taskModel draggedTask.id newStage
 
                                 NewLaneDrop ->
                                     case src of
@@ -226,9 +226,7 @@ update msg model =
                 (newTask, newTaskModel) = Task.updateActive model.taskModel task.id active
                 newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, case newTask of
-                        Nothing -> Cmd.none 
-                        Just t -> putTask t )
+                ( newModel, Cmd.none )
 
 
         NewTaskActive story active ->
