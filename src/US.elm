@@ -6,6 +6,7 @@ import List.Extra
 import Json.Encode as Encode
 import Random
 import EntityUUID
+import Dict
 
 
 type NewTaskState
@@ -22,13 +23,14 @@ type alias T =
     , description : String
     , newTaskState : NewTaskState
     , stage : USStage
+    , order : Float
     }
 
 
 type alias Model =
     {
         uuidModel : EntityUUID.Model,
-        userStories : List T
+        userStories : Dict.Dict String T
     }
 
 
@@ -36,7 +38,7 @@ init : Int -> Model
 init seed =
     {
         uuidModel = EntityUUID.init seed,
-        userStories = []
+        userStories = Dict.empty
     }
 
 
@@ -49,10 +51,13 @@ new model =
                 , description = ""
                 , stage = Backlog
                 , newTaskState = Active False
+                , order = case List.sortBy .order (Dict.values model.userStories) |> List.reverse |> List.head of
+                    Just us -> us.order + 10.0 |> floor |> toFloat
+                    Nothing -> 10.0
             }
     in
         ( newUS, { model
-            | userStories = model.userStories ++ [ newUS ]
+            | userStories = Dict.insert (EntityUUID.toString newUS.id) newUS model.userStories
             , uuidModel = newUUIDModel
         })
 
@@ -60,10 +65,12 @@ new model =
 update : Model -> Id -> (T -> T) -> (Maybe T, Model)
 update model usId modifier =
     let
-        matchingUS = List.head (List.filter (\us -> us.id == usId) model.userStories)
-        newUserStories = List.map (\us -> if us.id == usId then modifier us else us) model.userStories
+        uuid = (EntityUUID.toString usId)
+        maybeUs = Dict.get uuid model.userStories
     in
-        ( matchingUS, { model | userStories = newUserStories } )
+        (maybeUs, case maybeUs of
+            Just us -> { model | userStories = Dict.insert uuid (modifier us) model.userStories }
+            Nothing -> model)
 
 
 updateName : Model -> Id -> String -> (Maybe T, Model)
@@ -90,46 +97,41 @@ type USStage
 move : Model -> Id -> Id -> Model
 move model srcId targetId =
     let
-        targetMaybe =
-            List.Extra.find (\x -> x.id == targetId) model.userStories
+        src = Dict.get (EntityUUID.toString srcId) model.userStories
+        target = Dict.get (EntityUUID.toString targetId) model.userStories
     in
-    if srcId == targetId then
-        model
-
-    else
-        { model | userStories =
-        model.userStories
-            |> List.filter (\us -> us.id /= srcId)
-            |> List.map
-                (\us ->
-                    if us.id == targetId then
-                        model.userStories
-                            |> List.filter (\x -> x.id == srcId || x.id == targetId)
-                            |> List.reverse
-
-                    else
-                        [ us ]
-                )
-            |> List.concat
-            |> List.Extra.updateIf (\us -> us.id == srcId)
-                (\srcUs ->
-                    case targetMaybe of
-                        Nothing ->
-                            srcUs
-
+        if srcId == targetId then
+            model
+        else
+            case src of
+                Nothing -> model
+                Just srcUs ->
+                    case target of
+                        Nothing -> model
                         Just targetUs ->
-                            { srcUs | stage = targetUs.stage }
-                )
-        }
+                            let
+                                movingUp = srcUs.order > targetUs.order
+                                targetOrder = targetUs.order
+                                selectedUs = List.filter (\u -> if movingUp then u.order < targetOrder else u.order > targetOrder) (Dict.values model.userStories)
+                                                    |> List.sortBy .order
+                                adjacentOrder = (if movingUp then selectedUs else List.reverse selectedUs)
+                                                    |> List.head
+                                                    |> Maybe.map .order
+                                                    |> Maybe.withDefault (if movingUp then 0 else targetOrder + 10)
+                                newOrder = targetOrder + (adjacentOrder - targetOrder) / 2
+                            in
+                                { model | userStories = Dict.insert (EntityUUID.toString srcId) {srcUs | order = newOrder} model.userStories}
 
 
 filter : Model -> USStage -> List T
-filter model stage = model.userStories |> List.filter (\us -> us.stage == stage)
+filter model stage = Dict.values model.userStories
+                        |> List.filter (\us -> us.stage == stage)
+                        |> List.sortBy .order 
 
 
 count : Model -> Int
 count model =
-    List.length model.userStories
+    Dict.size model.userStories
 
 
 toJson : T -> Encode.Value
@@ -139,5 +141,6 @@ toJson us = Encode.object [
         ("description", Encode.string us.description),
         ("stage", case us.stage of
             Backlog -> Encode.string "Backlog"
-            Board -> Encode.string "Board")
+            Board -> Encode.string "Board"),
+        ("order", Encode.float us.order)
         ]

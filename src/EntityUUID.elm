@@ -1,4 +1,4 @@
-module EntityUUID exposing(Model, init, generate, T, toJson)
+module EntityUUID exposing(Model, init, generate, T, toJson, toString)
 
 import Random
 import UUID
@@ -31,3 +31,7 @@ generate model =
 
 toJson : T -> Encode.Value
 toJson uuid = Encode.string <| UUID.toString uuid
+
+
+toString : T -> String
+toString uuid = UUID.toString uuid
