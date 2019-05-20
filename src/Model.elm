@@ -181,7 +181,7 @@ update msg model =
                 (newUS, newUSModel) = US.new model.usModel
                 newModel = { model | usModel = newUSModel }
             in
-                ( newModel, putUS newUS )
+                ( newModel, putUS model.usModel newUS )
 
         SaveUSTitleInput story str ->
             let
@@ -191,7 +191,7 @@ update msg model =
                 (newModel, 
                     case newUS of
                         Nothing -> Cmd.none 
-                        Just us -> putUS us )
+                        Just us -> putUS model.usModel us )
 
         SaveUSDescriptionInput story str ->
             let
@@ -201,7 +201,7 @@ update msg model =
                 (newModel, 
                     case newUS of
                         Nothing -> Cmd.none 
-                        Just us -> putUS us )
+                        Just us -> putUS model.usModel us )
 
         SaveTaskDescriptionInput task str ->
             let
@@ -251,8 +251,8 @@ update msg model =
 port storePort : Encode.Value -> Cmd msg
 
 
-putUS : US.T -> Cmd Msg
-putUS us = storePort <| Encode.object [("type", Encode.string "US"), ("obj", US.toJson us)]
+putUS : US.Model -> US.T -> Cmd Msg
+putUS usModel us = storePort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
 
 
 putTask : Task.T -> Cmd Msg

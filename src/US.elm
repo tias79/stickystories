@@ -1,4 +1,4 @@
-module US exposing (Id, Model, NewTaskState(..), T, USStage(..), init, new, updateName, updateDescription, updateUSStage, updateNewTaskState, move, filter, count, toJson)
+module US exposing (Id, Model, NewTaskState(..), T, USStage(..), init, new, updateName, updateDescription, updateUSStage, updateNewTaskState, move, filter, count, toDeltaJson)
 
 import Board as Board
 import Set exposing (Set)
@@ -67,9 +67,10 @@ update model usId modifier =
     let
         uuid = (EntityUUID.toString usId)
         maybeUs = Dict.get uuid model.userStories
+            |> Maybe.map modifier
     in
         (maybeUs, case maybeUs of
-            Just us -> { model | userStories = Dict.insert uuid (modifier us) model.userStories }
+            Just us -> { model | userStories = Dict.insert uuid us model.userStories }
             Nothing -> model)
 
 
@@ -134,13 +135,26 @@ count model =
     Dict.size model.userStories
 
 
-toJson : T -> Encode.Value
-toJson us = Encode.object [
-        ("id", EntityUUID.toJson us.id),
-        ("name", Encode.string us.name),
-        ("description", Encode.string us.description),
-        ("stage", case us.stage of
-            Backlog -> Encode.string "Backlog"
-            Board -> Encode.string "Board"),
-        ("order", Encode.float us.order)
-        ]
+toDeltaJson : Model -> T -> Encode.Value
+toDeltaJson model us =
+        let 
+            maybeOrigUs = Dict.get (EntityUUID.toString us.id) model.userStories
+            id = ("id", EntityUUID.toJson us.id)
+            name = ("name", Encode.string us.name)
+            description = ("description", Encode.string us.description)
+            stage = ("stage", case us.stage of
+                    Backlog -> Encode.string "Backlog"
+                    Board -> Encode.string "Board")
+            order = ("order", Encode.float us.order)
+        in
+            case maybeOrigUs of
+                Nothing ->
+                    Encode.object [ id, name, description, stage, order ]
+                Just origUs ->
+                    Encode.object (
+                        [ id ]
+                        ++ if us.name /= origUs.name then [name] else []
+                        ++ if us.description /= origUs.description then [description] else []
+                        ++ if us.stage /= origUs.stage then [stage] else []
+                        ++ if us.order /= origUs.order then [order] else []
+                        )

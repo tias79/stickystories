@@ -95,7 +95,9 @@ updateTaskBoardStage model taskId stage = { model | tasks = List.Extra.updateIf 
 update : Model -> Id -> (T -> T) -> (Maybe T, Model)
 update model taskId modifier =
     let
-        matchingTask = List.head (List.filter (\task -> task.id == taskId) model.tasks)
+        matchingTask = List.filter (\task -> task.id == taskId) model.tasks
+            |> List.head
+            |> Maybe.map modifier
         newTasks = List.map (\task -> if task.id == taskId then modifier task else task) model.tasks
     in
         ( matchingTask, { model | tasks = newTasks } )

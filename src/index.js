@@ -18,7 +18,18 @@ var app = Elm.Main.init({
   flags: randInts
 });
 app.ports.storePort.subscribe(function(data) {
-  console.log("Port out: ", data);
+  let json = data.obj;
+  switch (data.type) {
+    case "US":
+      json._id = "US-" + json.id;
+      break;
+    case "Task":
+      json._id = "Task-" + json.id;
+      break;
+  }
+  //db.put(json);
+
+  console.log(data);
 });
 
 // db.changes().on('change', function(data) {
