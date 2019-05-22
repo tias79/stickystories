@@ -1,0 +1,28 @@
+{
+  "name": "stickystories",
+  "version": "1.0.0",
+  "description": "This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "elm-app": "^0.0.19",
+    "pouchdb": "^7.0.0",
+    "pouchdb-upsert": "^2.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tias79/stickystories.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tias79/stickystories/issues"
+  },
+  "homepage": "https://github.com/tias79/stickystories#readme"
+}

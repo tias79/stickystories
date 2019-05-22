@@ -211,14 +211,14 @@ update msg model =
                 ( newModel, 
                     case newTask of
                         Nothing -> Cmd.none 
-                        Just t -> putTask t )
+                        Just t -> putTask model.taskModel t )
 
         NewTask story ->
             let
                 (newTask, newTaskModel) = Task.new model.taskModel story.id
                 newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, putTask newTask )
+                ( newModel, putTask model.taskModel newTask )
 
 
         TaskActive task active ->
@@ -255,5 +255,5 @@ putUS : US.Model -> US.T -> Cmd Msg
 putUS usModel us = storePort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
 
 
-putTask : Task.T -> Cmd Msg
-putTask task = storePort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toJson task)]
+putTask : Task.Model -> Task.T -> Cmd Msg
+putTask taskModel task = storePort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toDeltaJson taskModel task)]

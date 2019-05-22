@@ -1,4 +1,4 @@
-module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateTaskBoardStage, updateDescription, updateActive, tasks, toJson)
+module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateTaskBoardStage, updateDescription, updateActive, tasks, toDeltaJson)
 
 
 import Board as Board
@@ -7,6 +7,7 @@ import Set exposing (Set)
 import List.Extra
 import Json.Encode as Encode
 import EntityUUID
+import Dict
 
 
 type alias Id = EntityUUID.T
@@ -24,7 +25,7 @@ type alias T =
 type alias Model =
     {
         uuidModel : EntityUUID.Model,
-        tasks : List T
+        tasks : Dict.Dict String T
     }
 
 
@@ -32,7 +33,7 @@ init : Int -> Model
 init initialSeed =
     {
         uuidModel = EntityUUID.init initialSeed,
-        tasks = []
+        tasks = Dict.empty
     }
 
 
@@ -49,25 +50,18 @@ new model usId =
     in
         ( newTask, { model
             | uuidModel = newUUIDModel
-            , tasks = model.tasks ++
-                [ newTask ]
+            , tasks = Dict.insert (EntityUUID.toString newTask.id) newTask model.tasks
         } )
 
 
 count : Model -> US.Id -> Int
-count model usId =
-    List.length <| List.filter (\task -> task.usId == usId) model.tasks
+count model usId = Dict.size model.tasks
 
 
 move : Model -> Id -> US.Id -> Model
 move model taskId targetUSId =
-    ( { model 
-        | tasks =
-            List.Extra.updateIf
-                (\task -> task.id == taskId)
-                (\task -> { task | usId = targetUSId, stage = Board.ToDo } )
-                model.tasks
-    } )
+    update model taskId (\task -> { task | usId = targetUSId })
+        |> Tuple.second
 
 
 boardStage : List T -> Board.Stage
@@ -85,22 +79,24 @@ boardStage list =
 
 
 updateBoardStage : Model -> US.Id -> Board.Stage -> Model
-updateBoardStage model usId stage = { model | tasks = List.Extra.updateIf (\task -> task.usId == usId) (\task -> { task | stage = stage}) model.tasks }
+updateBoardStage model usId stage = { model | tasks = Dict.map (\_ task -> if task.usId == usId then { task | stage = stage} else task) model.tasks }
 
 
 updateTaskBoardStage : Model -> Id -> Board.Stage -> Model
-updateTaskBoardStage model taskId stage = { model | tasks = List.Extra.updateIf (\task -> task.id == taskId) (\task -> { task | stage = stage}) model.tasks }
+updateTaskBoardStage model taskId stage = update model taskId (\task -> { task | stage = stage })
+        |> Tuple.second
 
 
 update : Model -> Id -> (T -> T) -> (Maybe T, Model)
 update model taskId modifier =
     let
-        matchingTask = List.filter (\task -> task.id == taskId) model.tasks
-            |> List.head
+        uuid = (EntityUUID.toString taskId)
+        maybeTask = Dict.get uuid model.tasks
             |> Maybe.map modifier
-        newTasks = List.map (\task -> if task.id == taskId then modifier task else task) model.tasks
     in
-        ( matchingTask, { model | tasks = newTasks } )
+        (maybeTask, case maybeTask of
+            Just task -> { model | tasks = Dict.insert uuid task model.tasks }
+            Nothing -> model)
 
 
 updateDescription : Model -> Id -> String -> (Maybe T, Model)
@@ -113,17 +109,27 @@ updateActive model taskId active = update model taskId (\task -> { task | active
 
 tasks : Model -> US.Id -> List T 
 tasks model usId =
-        model.tasks
+        Dict.values model.tasks
             |> List.filter (\task -> task.usId == usId)
 
 
-toJson : T -> Encode.Value
-toJson task = Encode.object [
-        ("id", EntityUUID.toJson task.id),
-        ("description", Encode.string task.description),
-        ("stage", case task.stage of
-            Board.ToDo -> Encode.string "ToDo"
-            Board.InProgress -> Encode.string "InProgress"
-            Board.Done -> Encode.string "Done"),
-        ("usId", EntityUUID.toJson task.usId)
-        ]
+toDeltaJson : Model -> T -> Encode.Value
+toDeltaJson model task =
+        let 
+            maybeOrigUs = Dict.get (EntityUUID.toString task.id) model.tasks
+            id = ("id", EntityUUID.toJson task.id)
+            description = ("description", Encode.string task.description)
+            stage = ("stage", case task.stage of
+                Board.ToDo -> Encode.string "ToDo"
+                Board.InProgress -> Encode.string "InProgress"
+                Board.Done -> Encode.string "Done")
+        in
+            case maybeOrigUs of
+                Nothing ->
+                    Encode.object [ id, description, stage ]
+                Just origUs ->
+                    Encode.object (
+                        [ id ]
+                        ++ if task.description /= origUs.description then [description] else []
+                        ++ if task.stage /= origUs.stage then [stage] else []
+                        )

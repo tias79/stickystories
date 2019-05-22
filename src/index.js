@@ -2,7 +2,9 @@ import './main.css';
 import { Elm } from './Main.elm';
 import registerServiceWorker from './registerServiceWorker';
 import PouchDB from 'pouchdb';
+import PouchDBUpsert from 'pouchdb-upsert';
 
+PouchDB.plugin(PouchDBUpsert);
 var db = new PouchDB('sticky-stories');
 
 const crypto = window.crypto || window.msCrypto;
@@ -27,8 +29,10 @@ app.ports.storePort.subscribe(function(data) {
       json._id = "Task-" + json.id;
       break;
   }
-  //db.put(json);
+  
+  db.upsert(json._id, (doc) => Object.assign(doc, json)).then((doc) => db.get(json._id).then((doc) => console.log("doc: ", doc)));
 
+//  db.get(json._id).then((doc) => console.log("doc: ", doc));
   console.log(data);
 });
 
