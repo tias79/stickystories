@@ -1,4 +1,4 @@
-module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateTaskBoardStage, updateDescription, updateActive, tasks, toDeltaJson)
+module USTask exposing (Id, T, new, Model, init, count, move, boardStage, updateBoardStage, updateTaskBoardStage, updateDescription, updateActive, tasks, toDeltaJson, fromJson)
 
 
 import Board as Board
@@ -6,6 +6,8 @@ import US as US
 import Set exposing (Set)
 import List.Extra
 import Json.Encode as Encode
+import Json.Decode as Decode
+import Json.Decode.Extra as DecodeExtra
 import EntityUUID
 import Dict
 
@@ -133,3 +135,43 @@ toDeltaJson model task =
                         ++ if task.description /= origUs.description then [description] else []
                         ++ if task.stage /= origUs.stage then [stage] else []
                         )
+
+
+stageDecoder : Decode.Decoder Board.Stage
+stageDecoder = Decode.string
+        |> Decode.map
+        (\str ->
+            case str of
+                "InProgress" -> Board.InProgress
+                "Done" -> Board.Done
+                _ -> Board.ToDo)
+
+taskDecoder =
+    Decode.map5
+        T
+        (Decode.field "id" EntityUUID.decoder)
+        (Decode.field "description" Decode.string)
+        (Decode.field "stage" stageDecoder)
+        (Decode.succeed False)
+        (Decode.field "usId" EntityUUID.decoder)
+
+
+fromJson : Model -> Encode.Value -> Model
+fromJson model json = 
+    let
+        maybeNewUS = Decode.decodeValue taskDecoder json
+    in
+        case maybeNewUS of
+            Err _ -> model
+            Ok newUS ->
+                let
+                    uuid = (EntityUUID.toString newUS.id)
+                    maybeUs = Dict.get uuid model.tasks
+                in                
+                    case maybeUs of
+                        Nothing -> 
+                                { model
+                                    | tasks = Dict.insert uuid newUS model.tasks
+                                }
+                        Just us ->
+                            { model | tasks = Dict.insert uuid us model.tasks }

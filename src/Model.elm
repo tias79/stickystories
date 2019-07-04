@@ -1,4 +1,4 @@
-port module Model exposing (DragSource(..), DropTarget(..), Model, Msg(..), UIState(..), init, update)
+port module Model exposing (DragSource(..), DropTarget(..), Model, Msg(..), UIState(..), init, update, receivePort)
 
 import Html.Events exposing (..)
 import Html5.DragDrop as DragDrop
@@ -6,6 +6,7 @@ import US as US
 import USTask as Task
 import Board as Board
 import Json.Encode as Encode
+import Json.Decode as Decode
 
 type UIState
     = Board
@@ -48,6 +49,7 @@ type Msg
     | NewTask US.T
     | TaskActive Task.T Bool
     | NewTaskActive US.T Bool
+    | ReceiveDocument Encode.Value
 
 
 init : ( Int, Int ) -> ( Model, Cmd Msg )
@@ -246,14 +248,36 @@ update msg model =
               }
             , Cmd.none
             )
+        
+        ReceiveDocument jsonValue -> 
+            let
+                objType = Result.withDefault "Unknown" <| Decode.decodeValue (Decode.field "type" Decode.string) jsonValue
+                objValueResult = Decode.decodeValue (Decode.field "obj" Decode.value) jsonValue
+            in
+                case Debug.log "ObjType" objType of
+                    "US" ->
+                        case objValueResult of
+                            Err _ ->
+                                (model , Cmd.none)
+                            Ok objValue ->
+                                ({model | usModel = US.fromJson model.usModel objValue} , Cmd.none)
+                    "Task" ->
+                        case objValueResult of
+                            Err _ ->
+                                (model , Cmd.none)
+                            Ok objValue ->
+                                ({model | taskModel = Task.fromJson model.taskModel objValue} , Cmd.none)
+                    _ ->
+                        (model, Cmd.none)
 
+port sendPort : Encode.Value -> Cmd msg
 
-port storePort : Encode.Value -> Cmd msg
+port receivePort: (Encode.Value -> msg) -> Sub msg
 
 
 putUS : US.Model -> US.T -> Cmd Msg
-putUS usModel us = storePort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
+putUS usModel us = sendPort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
 
 
 putTask : Task.Model -> Task.T -> Cmd Msg
-putTask taskModel task = storePort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toDeltaJson taskModel task)]
+putTask taskModel task = sendPort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toDeltaJson taskModel task)]

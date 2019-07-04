@@ -1,8 +1,10 @@
-module EntityUUID exposing(Model, init, generate, T, toJson, toString)
+module EntityUUID exposing(Model, init, generate, T, toJson, toString, decoder)
 
 import Random
 import UUID
 import Json.Encode as Encode
+import Json.Decode as Decode
+import Json.Decode.Extra as DecodeExtra
 
 
 type alias Model =
@@ -31,6 +33,12 @@ generate model =
 
 toJson : T -> Encode.Value
 toJson uuid = Encode.string <| UUID.toString uuid
+
+
+decoder : Decode.Decoder T
+decoder =
+    Decode.string
+        |> Decode.andThen (DecodeExtra.fromResult << UUID.fromString)
 
 
 toString : T -> String

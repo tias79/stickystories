@@ -1,9 +1,11 @@
-module US exposing (Id, Model, NewTaskState(..), T, USStage(..), init, new, updateName, updateDescription, updateUSStage, updateNewTaskState, move, filter, count, toDeltaJson)
+module US exposing (Id, Model, NewTaskState(..), T, USStage(..), init, new, updateName, updateDescription, updateUSStage, updateNewTaskState, move, filter, count, toDeltaJson, fromJson)
 
 import Board as Board
 import Set exposing (Set)
 import List.Extra
 import Json.Encode as Encode
+import Json.Decode as Decode
+import Json.Decode.Extra as DecodeExtra
 import Random
 import EntityUUID
 import Dict
@@ -127,7 +129,7 @@ move model srcId targetId =
 filter : Model -> USStage -> List T
 filter model stage = Dict.values model.userStories
                         |> List.filter (\us -> us.stage == stage)
-                        |> List.sortBy .order 
+                        |> List.sortBy (Debug.log "Order" .order)
 
 
 count : Model -> Int
@@ -158,3 +160,39 @@ toDeltaJson model us =
                         ++ if us.stage /= origUs.stage then [stage] else []
                         ++ if us.order /= origUs.order then [order] else []
                         )
+
+
+stageDecoder : Decode.Decoder USStage
+stageDecoder = Decode.string
+        |> Decode.map
+        (\str ->
+            case str of
+                "Board" -> Board
+                _ -> Backlog)
+
+
+usDecoder =
+    Decode.map6
+        T
+        (Decode.field "id" EntityUUID.decoder)
+        (Decode.field "name" Decode.string)
+        (Decode.field "description" Decode.string)
+        (Decode.succeed (Active False))
+        (Decode.field "stage" stageDecoder)
+        (Decode.field "order" Decode.float)
+
+
+fromJson : Model -> Encode.Value -> Model
+fromJson model json = 
+    let
+        maybeNewUS = Decode.decodeValue usDecoder json
+    in
+        case maybeNewUS of
+            Err error -> Debug.log (Decode.errorToString error) model
+            Ok newUS ->
+                let
+                    uuid = (EntityUUID.toString newUS.id)
+                in                
+                    { model
+                        | userStories = Dict.insert uuid newUS model.userStories
+                    }
