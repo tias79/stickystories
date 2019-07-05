@@ -64,32 +64,32 @@ new model =
         })
 
 
-update : Model -> Id -> (T -> T) -> (Maybe T, Model)
+update : Model -> Id -> (T -> T) -> (List T, Model)
 update model usId modifier =
     let
         uuid = (EntityUUID.toString usId)
         maybeUs = Dict.get uuid model.userStories
             |> Maybe.map modifier
     in
-        (maybeUs, case maybeUs of
-            Just us -> { model | userStories = Dict.insert uuid us model.userStories }
-            Nothing -> model)
+        case maybeUs of
+            Just us -> ([us], { model | userStories = Dict.insert uuid us model.userStories })
+            Nothing -> ([], model)
 
 
-updateName : Model -> Id -> String -> (Maybe T, Model)
-updateName model usId name = update model usId (\us -> { us | name = name })
+updateName : Model -> Id -> String -> (List T, Model)
+updateName model usId name = update model (Debug.log "updateName usId" usId) (\us -> { us | name = name })
 
 
-updateDescription : Model -> Id -> String -> (Maybe T, Model)
-updateDescription model usId description = update model usId (\us -> { us | description = description })
+updateDescription : Model -> Id -> String -> (List T, Model)
+updateDescription model usId description = update model (Debug.log "updateDescription usId" usId) (\us -> { us | description = description })
 
 
-updateUSStage : Model -> Id -> USStage -> (Maybe T, Model)
-updateUSStage model usId stage = update model usId (\us -> { us | stage = stage })
+updateUSStage : Model -> Id -> USStage -> (List T, Model)
+updateUSStage model usId stage = update model (Debug.log "updateUSStage usId" usId) (\us -> { us | stage = stage })
 
 
 updateNewTaskState : Model -> Id -> NewTaskState -> Model
-updateNewTaskState model usId state = Tuple.second <| update model usId (\us -> { us | newTaskState = state })
+updateNewTaskState model usId state = Tuple.second <| update model (Debug.log "newTaskState usId" usId) (\us -> { us | newTaskState = state })
 
 
 type USStage
@@ -97,20 +97,20 @@ type USStage
     | Board
 
 
-move : Model -> Id -> Id -> Model
+move : Model -> Id -> Id -> (List T, Model)
 move model srcId targetId =
     let
         src = Dict.get (EntityUUID.toString srcId) model.userStories
         target = Dict.get (EntityUUID.toString targetId) model.userStories
     in
         if srcId == targetId then
-            model
+            ([], model)
         else
             case src of
-                Nothing -> model
+                Nothing -> ([], model)
                 Just srcUs ->
                     case target of
-                        Nothing -> model
+                        Nothing -> ([], model)
                         Just targetUs ->
                             let
                                 movingUp = srcUs.order > targetUs.order
@@ -122,14 +122,15 @@ move model srcId targetId =
                                                     |> Maybe.map .order
                                                     |> Maybe.withDefault (if movingUp then 0 else targetOrder + 10)
                                 newOrder = targetOrder + (adjacentOrder - targetOrder) / 2
+                                updatedSrcUS = {srcUs | order = newOrder}
                             in
-                                { model | userStories = Dict.insert (EntityUUID.toString srcId) {srcUs | order = newOrder} model.userStories}
+                                ([updatedSrcUS], { model | userStories = Dict.insert (EntityUUID.toString srcId) updatedSrcUS model.userStories})
 
 
 filter : Model -> USStage -> List T
 filter model stage = Dict.values model.userStories
                         |> List.filter (\us -> us.stage == stage)
-                        |> List.sortBy (Debug.log "Order" .order)
+                        |> List.sortBy .order
 
 
 count : Model -> Int
@@ -157,7 +158,7 @@ toDeltaJson model us =
                         [ id ]
                         ++ if us.name /= origUs.name then [name] else []
                         ++ if us.description /= origUs.description then [description] else []
-                        ++ if us.stage /= origUs.stage then [stage] else []
+                        ++ if (Debug.log "us.stage" us.stage) /= (Debug.log "origUs.stage" origUs.stage) then [stage] else []
                         ++ if us.order /= origUs.order then [order] else []
                         )
 

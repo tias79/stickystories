@@ -40,6 +40,8 @@ var app = Elm.Main.init({
   flags: randInts
 });
 app.ports.sendPort.subscribe(function(data) {
+  console.log("Port out: ", data);
+  return;
   let json = data.obj;
   switch (data.type) {
     case "US":
@@ -62,11 +64,11 @@ localDB.changes({
   include_docs: true
 }).on('change', function(change) {
   console.log("Port in: ", change);
-
+  
   if (change.id.startsWith("US")) {
-    app.ports.receivePort.send({ "type": "US", "obj": change.doc});
+    //app.ports.receivePort.send({ "type": "US", "obj": change.doc});
   } else if (change.id.startsWith("Task")) {
-    app.ports.receivePort.send({ "type": "Task", "obj": change.doc});
+    //app.ports.receivePort.send({ "type": "Task", "obj": change.doc});
   } else {
     console.error("Unknown type: " + change.id);
   }

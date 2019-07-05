@@ -72,23 +72,19 @@ update msg model =
             let
                 ( model_, result ) =
                     DragDrop.update msg_ model.dragDropUserStory
-            in
-            ( { model
-                | dragDropUserStory = model_
-                , usModel =
-                    case result of
+                (updatedUS, newUsModel) = case result of
                         Nothing ->
-                            model.usModel
+                             ([], model.usModel)
 
                         Just ( src, target, _ ) ->
-                            case target of
+                            case Debug.log "target" target of
                                 UserStoryDrop targetUS ->
                                     case src of
                                         DragUS srcUS ->
                                             US.move model.usModel srcUS.id targetUS.id
 
                                         DragTask task ->
-                                            model.usModel
+                                            ([], model.usModel)
 
                                 BoardDrop targetUS newStage ->
                                     case src of
@@ -102,40 +98,39 @@ update msg model =
                                                    updateBoard
 
                                                 Board.InProgress ->
-                                                    model.usModel
+                                                    ([], model.usModel)
 
                                                 Board.Done ->
                                                     updateBoard
 
                                         DragTask draggedTask ->
-                                            model.usModel
+                                             ([], model.usModel)
 
                                 NewLaneDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            Tuple.second <| US.updateUSStage model.usModel srcUS.id US.Board
+                                            US.updateUSStage model.usModel srcUS.id US.Board
 
                                         DragTask task ->
-                                            model.usModel
+                                             ([], model.usModel)
 
                                 BacklogDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            Tuple.second <| US.updateUSStage model.usModel srcUS.id US.Backlog
+                                            US.updateUSStage model.usModel srcUS.id US.Backlog
 
                                         DragTask task ->
-                                            model.usModel
-                , taskModel =
-                   case result of
+                                             ([], model.usModel)
+                (updatedTasks, newTaskModel) = case result of
                         Nothing ->
-                            model.taskModel
+                            ([], model.taskModel)
 
                         Just ( src, target, _ ) ->
                             case target of
                                 UserStoryDrop targetUS ->
                                     case src of
                                         DragUS srcUS ->
-                                            model.taskModel
+                                            ([], model.taskModel)
 
                                         DragTask task ->
                                             Task.move model.taskModel task.id targetUS.id
@@ -148,31 +143,36 @@ update msg model =
                                                    Task.updateBoardStage model.taskModel srcUS.id newStage 
 
                                                 Board.InProgress ->
-                                                    model.taskModel
+                                                    ([], model.taskModel)
 
                                                 Board.Done ->
                                                    Task.updateBoardStage model.taskModel srcUS.id newStage 
 
                                         DragTask draggedTask ->
-                                            Task.updateTaskBoardStage model.taskModel draggedTask.id newStage
+                                            ([], Task.updateTaskBoardStage model.taskModel draggedTask.id newStage)
 
                                 NewLaneDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            model.taskModel
+                                            ([], model.taskModel)
 
                                         DragTask task ->
-                                            model.taskModel
+                                            ([], model.taskModel)
 
                                 BacklogDrop ->
                                     case src of
                                         DragUS srcUS ->
-                                            model.taskModel
+                                            ([], model.taskModel)
 
                                         DragTask task ->
-                                            model.taskModel
-              }
-            , Cmd.none
+                                            ([], model.taskModel)
+            in
+            ( { model
+                | dragDropUserStory = model_
+                , usModel = newUsModel       
+                , taskModel = newTaskModel
+            }     
+            , Cmd.batch <| List.map (putUS model.usModel) updatedUS ++ List.map (putTask model.taskModel) updatedTasks
             )
 
         UpdateUIState state ->
@@ -187,33 +187,24 @@ update msg model =
 
         SaveUSTitleInput story str ->
             let
-                (newUS, newUSModel) = US.updateName model.usModel story.id str
+                (updatedUS, newUSModel) = US.updateName model.usModel story.id str
                 newModel = { model | usModel = newUSModel }
             in
-                (newModel, 
-                    case newUS of
-                        Nothing -> Cmd.none 
-                        Just us -> putUS model.usModel us )
+                (newModel, Cmd.batch <| List.map (putUS model.usModel) updatedUS)
 
         SaveUSDescriptionInput story str ->
             let
-                (newUS, newUSModel) = US.updateDescription model.usModel story.id str
+                (updatedUS, newUSModel) = US.updateDescription model.usModel story.id str
                 newModel = { model | usModel = newUSModel }
             in
-                (newModel, 
-                    case newUS of
-                        Nothing -> Cmd.none 
-                        Just us -> putUS model.usModel us )
+                (newModel, Cmd.batch <| List.map (putUS model.usModel) updatedUS)
 
         SaveTaskDescriptionInput task str ->
             let
-                (newTask, newTaskModel) = Task.updateDescription model.taskModel task.id str
+                (updatedTasks, newTaskModel) = Task.updateDescription model.taskModel task.id str
                 newModel = { model | taskModel = newTaskModel }
             in
-                ( newModel, 
-                    case newTask of
-                        Nothing -> Cmd.none 
-                        Just t -> putTask model.taskModel t )
+                (newModel, Cmd.batch <| List.map (putTask model.taskModel) updatedTasks)
 
         NewTask story ->
             let
@@ -276,8 +267,8 @@ port receivePort: (Encode.Value -> msg) -> Sub msg
 
 
 putUS : US.Model -> US.T -> Cmd Msg
-putUS usModel us = sendPort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
-
+--putUS usModel us = sendPort <| Encode.object [("type", Encode.string "US"), ("obj", US.toDeltaJson usModel us)]
+putUS usModel us = sendPort <| Encode.string (Debug.log "DEBUG" "test")
 
 putTask : Task.Model -> Task.T -> Cmd Msg
 putTask taskModel task = sendPort <| Encode.object [("type", Encode.string "Task"), ("obj", Task.toDeltaJson taskModel task)]

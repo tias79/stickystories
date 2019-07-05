@@ -56,14 +56,19 @@ new model usId =
         } )
 
 
+maybeToList : Maybe a -> List a
+maybeToList maybe = case maybe of
+    Nothing -> []
+    Just x -> x :: []
+
+
 count : Model -> US.Id -> Int
 count model usId = Dict.size model.tasks
 
 
-move : Model -> Id -> US.Id -> Model
+move : Model -> Id -> US.Id -> (List T, Model)
 move model taskId targetUSId =
     update model taskId (\task -> { task | usId = targetUSId })
-        |> Tuple.second
 
 
 boardStage : List T -> Board.Stage
@@ -80,8 +85,23 @@ boardStage list =
             False -> Board.ToDo
 
 
-updateBoardStage : Model -> US.Id -> Board.Stage -> Model
-updateBoardStage model usId stage = { model | tasks = Dict.map (\_ task -> if task.usId == usId then { task | stage = stage} else task) model.tasks }
+insert : Dict.Dict String T -> List T -> Dict.Dict String T
+insert dict values = 
+    let
+        maybeTask = List.head values
+        tail = List.tail values
+    in 
+        case values of
+            [] -> dict
+            h::t -> insert (Dict.insert (EntityUUID.toString h.id) h dict) t
+
+
+updateBoardStage : Model -> US.Id -> Board.Stage -> (List T, Model)
+updateBoardStage model usId stage = 
+    let
+        filteredTasks = model.tasks |> Dict.filter (\_ task -> task.usId == usId) |> Dict.values
+    in
+        (filteredTasks, { model | tasks = Dict.map (\_ task -> if task.usId == usId then { task | stage = stage} else task) model.tasks })
 
 
 updateTaskBoardStage : Model -> Id -> Board.Stage -> Model
@@ -89,23 +109,22 @@ updateTaskBoardStage model taskId stage = update model taskId (\task -> { task |
         |> Tuple.second
 
 
-update : Model -> Id -> (T -> T) -> (Maybe T, Model)
+update : Model -> Id -> (T -> T) -> (List T, Model)
 update model taskId modifier =
     let
         uuid = (EntityUUID.toString taskId)
-        maybeTask = Dict.get uuid model.tasks
+        updatedTasks = Dict.get uuid model.tasks
             |> Maybe.map modifier
+            |> maybeToList
     in
-        (maybeTask, case maybeTask of
-            Just task -> { model | tasks = Dict.insert uuid task model.tasks }
-            Nothing -> model)
+        (updatedTasks, { model | tasks = insert model.tasks updatedTasks })
 
 
-updateDescription : Model -> Id -> String -> (Maybe T, Model)
+updateDescription : Model -> Id -> String -> (List T, Model)
 updateDescription model taskId description = update model taskId (\task -> { task | description = description })
 
 
-updateActive : Model -> Id -> Bool -> (Maybe T, Model)
+updateActive : Model -> Id -> Bool -> (List T, Model)
 updateActive model taskId active = update model taskId (\task -> { task | active = active })
 
 
