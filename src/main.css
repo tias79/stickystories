@@ -115,13 +115,16 @@ body {
 .userstory .header .nr {
   color: grey;
 }
-.userstory p {
+.userstory textarea {
   overflow-y: auto;
   height: 100%;
   outline: none;
+  resize: none;
+  border: 0;
 }
-.userstory h1 {
+.userstory input {
   outline: none;
+  border: 0;
 }
 .userstory.virtual {
   opacity: 0.5;
@@ -166,10 +169,14 @@ body {
   z-index: 100;
   transition: color 0.2s, left 1s, top 1s;
 }
-.task p {
+.task textarea {
   overflow-y: auto;
+  width: 100%;
   height: 100%;
   outline: none;
+  resize: none;
+  border: 0;
+  background-color: transparent;
 }
 .stage {
   position: relative;

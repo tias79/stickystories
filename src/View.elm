@@ -8,7 +8,8 @@ import Json.Decode as Json
 import List.Extra
 import Model exposing (Model, Msg, UIState)
 import US as US
-import Html.Keyed as Keyed
+import USTask as Task
+import Board as Board
 
 
 mainClass : Model -> String
@@ -38,7 +39,7 @@ view model =
             if model.uiState == Model.Backlog then
                 ShowLaneDrop
             else
-                if List.length model.userStories == 0 then
+                if US.count model.usModel == 0 then
                     ShowBacklogHint
                 else
                     HideVirtualLane
@@ -46,17 +47,15 @@ view model =
     
     div [ id "main", class <| mainClass model ]
         [ div ([ id "backlog" ] ++ DragDrop.droppable Model.DragDropUserStory Model.BacklogDrop)
-            ((model.userStories
-                |> List.filter (\us -> us.stage == US.Backlog)
-                |> List.map (\story -> userStoryCard story)
+            ((US.filter model.usModel US.Backlog
+                |> List.map (\story -> userStoryCard story (Task.tasks model.taskModel story.id))
              )
                 ++ [ newUserStoryCard ]
             )
         , div [ class "bar", onClick <| toggleBacklog model ] [ text "BACKLOG", i [ class "button material-icons" ] [ text "chevron_left" ] ]
         , div [ id "board" ]
-            ((model.userStories
-                |> List.filter (\us -> us.stage /= US.Backlog)
-                |> List.map (\us -> laneComponent us)
+            ((US.filter model.usModel US.Board
+                |> List.map (\us -> laneComponent us (Task.tasks model.taskModel us.id))
              )
                 ++ [ virtualLaneComponent virtualLaneState ]
             )
@@ -64,39 +63,36 @@ view model =
         ]
 
 
-laneComponent : US.US -> Html Model.Msg
-laneComponent us =
+laneComponent : US.T -> List Task.T -> Html Model.Msg
+laneComponent us tasks =
     let
-        usStage =
-            US.usBoardStage us
-
-        filteredUS =
-            US.filterUsTasks us usStage
+        usStage = Task.boardStage tasks
+        filteredTasks = \stage -> tasks |> List.filter (\task -> task.stage == stage)
     in
     div [ class "lane" ]
-        [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.ToDo))
+        [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.ToDo))
             (case usStage of
-                US.ToDo ->
-                    [ userStoryCard (US.filterUsTasks us US.ToDo) ]
+                Board.ToDo ->
+                    [ userStoryCard us (filteredTasks Board.ToDo) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.ToDo) ]
+                    [ tasksContainer (filteredTasks Board.ToDo) ]
             )
-        , div ([ class "inprogress stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.InProgress))
+        , div ([ class "inprogress stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.InProgress))
             (case usStage of
-                US.InProgress ->
-                    [ userStoryCard (US.filterUsTasks us US.InProgress) ]
+                Board.InProgress ->
+                    [ userStoryCard us (filteredTasks Board.InProgress) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.InProgress) ]
+                    [ tasksContainer (filteredTasks Board.InProgress) ]
             )
-        , div ([ class "done stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us US.Done))
+        , div ([ class "done stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.Done))
             (case usStage of
-                US.Done ->
-                    [ userStoryCard (US.filterUsTasks us US.Done) ]
+                Board.Done ->
+                    [ userStoryCard us (filteredTasks Board.Done) ]
 
                 _ ->
-                    [ tasks (US.filterUsTasks us US.Done) ]
+                    [ tasksContainer (filteredTasks Board.Done) ]
             )
         ]
 
@@ -118,11 +114,11 @@ virtualLaneComponent state =
         ]
 
 
-userStoryCard : US.US -> Html Model.Msg
-userStoryCard story =
+userStoryCard : US.T -> List Task.T -> Html Model.Msg
+userStoryCard story storytasks =
     let
         hover =
-            (story.tasks
+            (storytasks
                 |> List.map
                     (\task ->
                         if task.active then
@@ -148,7 +144,7 @@ userStoryCard story =
                 > 0
 
         allowNewTask =
-            if US.usBoardStage story /= US.ToDo then
+            if Task.boardStage storytasks /= Board.ToDo then
                 False
 
             else
@@ -165,12 +161,12 @@ userStoryCard story =
             ++ DragDrop.droppable Model.DragDropUserStory (Model.UserStoryDrop story)
         )
         [ div [ class "header" ]
-            [ h1 [ class "nr" ] [ text <| "#" ++ String.fromInt story.id ]
-            , Keyed.node "h1" [ contenteditable True, on "blur" (Json.map (Model.SaveUSTitleInput story) targetTextContent) ] [ ("usname", text story.name) ]
+            [ h1 [ class "nr" ] [ text <| "#" ]
+            , input [ onInput (Model.SaveUSTitleInput story), value story.name ] []
             ]
-        , Keyed.node "p" [ contenteditable True, on "blur" (Json.map (Model.SaveUSDescriptionInput story) targetTextContent) ] [ ("usdesc", text story.description) ]
+        , textarea [ onInput (Model.SaveUSDescriptionInput story) ] [ text story.description ]
         , div [ class "tasks" ]
-            (List.map (\task -> taskCard task hover) story.tasks
+            (List.map (\task -> taskCard task hover) storytasks
                 ++ (if allowNewTask then
                         [ newTask story hover ]
 
@@ -181,7 +177,7 @@ userStoryCard story =
         ]
 
 
-taskCard : US.Task -> Bool -> Html Model.Msg
+taskCard : Task.T -> Bool -> Html Model.Msg
 taskCard task hover =
     div
         ([ classList
@@ -194,18 +190,15 @@ taskCard task hover =
          ]
             ++ DragDrop.draggable Model.DragDropUserStory (Model.DragTask task)
         )
-        [ Keyed.node "p"
-            [ contenteditable True
-            , on "blur" (Json.map (Model.SaveTaskDescriptionInput task) targetTextContent)
-            ]
-            [ ("tdesc", text task.description) ]
+        [ textarea
+            [ onInput (Model.SaveTaskDescriptionInput task) ] [ ]
         ]
 
 
-tasks : US.US -> Html Model.Msg
-tasks us =
+tasksContainer : List Task.T -> Html Model.Msg
+tasksContainer tasks =
     div [ class "tasks" ]
-        (List.map (\task -> taskCard task False) us.tasks)
+        (List.map (\task -> taskCard task False) tasks)
 
 
 targetTextContent : Json.Decoder String
@@ -244,7 +237,7 @@ virtualUserStoryCard hide button description attrs =
         ]
 
 
-newTask : US.US -> Bool -> Html Model.Msg
+newTask : US.T -> Bool -> Html Model.Msg
 newTask story hover =
     virtualTask story
         hover
@@ -255,7 +248,7 @@ newTask story hover =
         ]
 
 
-virtualTask : US.US -> Bool -> String -> String -> List (Attribute Msg) -> Html Model.Msg
+virtualTask : US.T -> Bool -> String -> String -> List (Attribute Msg) -> Html Model.Msg
 virtualTask story hover button description attrs =
     let
         active =
