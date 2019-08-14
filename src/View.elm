@@ -1,15 +1,13 @@
 module View exposing (view)
 
+import Board as Board
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Html5.DragDrop as DragDrop
-import Json.Decode as Json
-import List.Extra
 import Model exposing (Model, Msg, UIState)
 import US as US
 import USTask as Task
-import Board as Board
 
 
 mainClass : Model -> String
@@ -35,16 +33,16 @@ toggleBacklog model =
 view : Model -> Html Msg
 view model =
     let
-        virtualLaneState = 
+        virtualLaneState =
             if model.uiState == Model.Backlog then
                 ShowLaneDrop
+
+            else if US.count model.usModel == 0 then
+                ShowBacklogHint
+
             else
-                if US.count model.usModel == 0 then
-                    ShowBacklogHint
-                else
-                    HideVirtualLane
+                HideVirtualLane
     in
-    
     div [ id "main", class <| mainClass model ]
         [ div ([ id "backlog" ] ++ DragDrop.droppable Model.DragDropUserStory Model.BacklogDrop)
             ((US.filter model.usModel US.Backlog
@@ -66,8 +64,11 @@ view model =
 laneComponent : US.T -> List Task.T -> Html Model.Msg
 laneComponent us tasks =
     let
-        usStage = Task.boardStage tasks
-        filteredTasks = \stage -> tasks |> List.filter (\task -> task.stage == stage)
+        usStage =
+            Task.boardStage tasks
+
+        filteredTasks =
+            \stage -> tasks |> List.filter (\task -> task.stage == stage)
     in
     div [ class "lane" ]
         [ div ([ class "todo stage" ] ++ DragDrop.droppable Model.DragDropUserStory (Model.BoardDrop us Board.ToDo))
@@ -107,7 +108,8 @@ virtualLaneComponent : VirtualLaneState -> Html Model.Msg
 virtualLaneComponent state =
     div [ classList [ ( "lane", True ), ( "hide", state == HideVirtualLane ) ] ]
         [ div [ class "todo stage" ]
-            [ newLaneUserStoryCard (state /= ShowLaneDrop), backlogHintStoryCard (state /= ShowBacklogHint)
+            [ newLaneUserStoryCard (state /= ShowLaneDrop)
+            , backlogHintStoryCard (state /= ShowBacklogHint)
             ]
         , div [ class "inprogress stage" ] []
         , div [ class "done stage" ] []
@@ -191,7 +193,8 @@ taskCard task hover =
             ++ DragDrop.draggable Model.DragDropUserStory (Model.DragTask task)
         )
         [ textarea
-            [ onInput (Model.SaveTaskDescriptionInput task) ] [ ]
+            [ onInput (Model.SaveTaskDescriptionInput task) ]
+            []
         ]
 
 
@@ -199,11 +202,6 @@ tasksContainer : List Task.T -> Html Model.Msg
 tasksContainer tasks =
     div [ class "tasks" ]
         (List.map (\task -> taskCard task False) tasks)
-
-
-targetTextContent : Json.Decoder String
-targetTextContent =
-    Json.at [ "target", "textContent" ] Json.string
 
 
 newUserStoryCard : Html Model.Msg
