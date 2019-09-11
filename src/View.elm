@@ -194,7 +194,7 @@ taskCard task hover =
         )
         [ textarea
             [ onInput (Model.SaveTaskDescriptionInput task) ]
-            []
+            [ text task.description ]
         ]
 
 
