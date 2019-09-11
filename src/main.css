@@ -166,8 +166,8 @@ body {
   padding:0.5rem;
   box-shadow: 5px 5px 7px rgba(33,33,33,.7);
   overflow-y: auto;
-  z-index: 100;
-  transition: color 0.2s, left 1s, top 1s;
+  transition: color 0.2s, left 1s, top 1s, z-index 0.2s;
+  opacity: 0.75;
 }
 .task textarea {
   overflow-y: auto;
@@ -201,66 +201,82 @@ body {
 .userstory > .tasks > .task:nth-child(1).hover {
   left: calc(100% - 11.5vw);
   top: 1.5vw;
+  z-index: 101;
 }
 .userstory > .tasks > .task:nth-child(2).hover {
   left: calc(100% - 9.5vw);
   top: 5vw;
+  z-index: 102;
 }
 .userstory > .tasks > .task:nth-child(3).hover {
   left: calc(100% - 11.5vw);
   top: 8vw;
+  z-index: 103;
 }
 .userstory > .tasks > .task:nth-child(4).hover {
   left: calc(100% - 9.5vw);
   top: 11vw;
+  z-index: 104;
 }
 .userstory > .tasks > .task:nth-child(5).hover {
   left: calc(100% - 18.5vw);
   top: 2vw;
+  z-index: 105;
 }
 .userstory > .tasks > .task:nth-child(6).hover {
   left: calc(100% - 16.5vw);
   top: 5vw;
+  z-index: 106;
 }
 .userstory > .tasks > .task:nth-child(7).hover {
   left: calc(100% - 18.5vw);
   top: 8vw;
+  z-index: 107;
 }
 .userstory > .tasks > .task:nth-child(8).hover {
   left: calc(100% - 16.5vw);
   top: 11vw;
+  z-index: 108;
 }
 .userstory > .tasks > .task:nth-child(9).hover {
   left: calc(100% - 25.5vw);
   top: 2vw;
+  z-index: 109;
 }
 .userstory > .tasks > .task:nth-child(10).hover {
   left: calc(100% - 23.5vw);
   top: 5vw;
+  z-index: 110;
 }
 .userstory > .tasks > .task:nth-child(11).hover {
   left: calc(100% - 25.5vw);
   top: 8vw;
+  z-index: 111;
 }
 .userstory > .tasks > .task:nth-child(12).hover {
   left: calc(100% - 23.5vw);
   top: 11vw;
+  z-index: 112;
 }
 .userstory > .tasks > .task:nth-child(13).hover {
   left: calc(100% - 32.5vw);
   top: 2vw;
+  z-index: 113;
 }
 .userstory > .tasks > .task:nth-child(14).hover {
   left: calc(100% - 30.5vw);
   top: 5vw;
+  z-index: 114;
 }
 .userstory > .tasks > .task:nth-child(15).hover {
   left: calc(100% - 32.5vw);
   top: 8vw;
+  z-index: 115;
 }
 .userstory > .tasks > .task:nth-child(16).hover {
   left: calc(100% - 30.5vw);
   top: 11vw;
+  z-index: 116;
 }
 
 .stage > .tasks > .task:nth-child(1) {
@@ -336,12 +352,12 @@ body {
 /*
   box-shadow:10px 10px 7px rgba(0,0,0,.7);
   transform: scale(1.1);
-  z-index: 10;
-*/
+  */
+  z-index: 120 !important;
   color: black;
 }
 .task.virtual {
-  opacity: 0.5;
+  opacity: 0.3;
   border: 2px dashed lightgray;
   font-family: 'Indie Flower', cursive;
   font-size: larger;

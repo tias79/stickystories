@@ -245,7 +245,7 @@ taskDecoder template =
         (Decode.field "usId" EntityUUID.decoder)
         (Decode.oneOf [ Decode.field "description" Decode.string, Decode.succeed template.description ])
         (Decode.oneOf [ Decode.field "stage" stageDecoder, Decode.succeed template.stage ])
-        (Decode.succeed False)
+        (Decode.succeed  template.active)
 
 
 
