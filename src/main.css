@@ -165,10 +165,21 @@ body {
   width:10vw;
   padding:0.5rem;
   box-shadow: 5px 5px 7px rgba(33,33,33,.7);
-  overflow-y: auto;
-  transition: color 0.2s, left 1s, top 1s, z-index 0.2s;
   opacity: 0.75;
+  transition: color 0.2s, left 0.3s, top 0.3s;
 }
+
+.userstory .tasks .hover {
+  color: grey;
+}
+
+.userstory .tasks .task.active {
+  z-index: 120 !important;
+  color: black;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
 .task textarea {
   overflow-y: auto;
   width: 100%;
@@ -345,17 +356,8 @@ body {
 }
 
 
-.userstory .tasks .hover {
-  color: grey;
-}
-.userstory .tasks .task.active {
-/*
-  box-shadow:10px 10px 7px rgba(0,0,0,.7);
-  transform: scale(1.1);
-  */
-  z-index: 120 !important;
-  color: black;
-}
+
+
 .task.virtual {
   opacity: 0.3;
   border: 2px dashed lightgray;
